@@ -1,0 +1,27 @@
+services:
+  investingview-preview:
+    build: .
+    container_name: investingview-hig-review-9001
+    ports:
+      - "9001:9000"
+    volumes:
+      - ./data:/data
+      - preview-logs:/app/logs
+    environment:
+      - FLASK_ENV=production
+      - DATABASE_PATH=/data/investingview.db
+      - TZ=America/New_York
+    # UI review should start immediately without the first-run fetch or scheduler.
+    command:
+      - python
+      - -c
+      - "from app import create_app; from models.db import init_db; from services.universe import seed_default_universe; init_db(); seed_default_universe(); create_app().run(host='0.0.0.0', port=9000, threaded=True)"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:9000/api/health', timeout=5).close()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  preview-logs:

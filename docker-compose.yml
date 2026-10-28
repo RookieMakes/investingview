@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  investingview:
+    build: .
+    container_name: investingview
+    ports:
+      - "9000:9000"
+    volumes:
+      - ./data:/data
+      - ./logs:/app/logs
+    environment:
+      - FLASK_ENV=production
+      - DATABASE_PATH=/data/investingview.db
+      - TZ=America/New_York
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:9000/api/health', timeout=5).close()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s

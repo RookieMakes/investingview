@@ -1,0 +1,1049 @@
+<!-- ═══════════════════════════════════════════════════════════
+     Portfolio Screen — Portfolio Overview & Positions
+     Loaded by App.loadScreen('portfolio') into #content
+     Matches UX mockup: AGENTIC/design/screens/portfolio-overview.html
+     ═══════════════════════════════════════════════════════════ -->
+
+<style>
+  /* The widget owns its height; disabled tickers leave no reserved space. */
+  #content.main-content { margin-top: calc(var(--nav-height) + var(--market-ticker-height, 0px)); }
+  #panel-portfolio { margin-top: 0; padding: 0; }
+
+  /* Tokens live in css/styles.css (:root, global Terminal Precision) —
+     no per-screen pinning. */
+
+  /* ─── SUMMARY CARDS ─── */
+  .summary-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-4); margin-bottom: var(--space-6); }
+  .summary-card { background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-6); display: flex; flex-direction: column; gap: var(--space-2); transition: border-color var(--duration-normal) var(--ease-out), box-shadow var(--duration-normal) var(--ease-out); }
+  .summary-card:hover { border-color: var(--color-border-strong); box-shadow: var(--shadow-sm); }
+  .summary-card-header { display: flex; align-items: center; gap: var(--space-2); }
+  .summary-card-icon { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-sm); background: var(--color-primary-subtle); color: var(--color-primary); flex-shrink: 0; }
+  .summary-card-icon svg { width: 16px; height: 16px; }
+  .summary-card-label { font-size: var(--font-size-sm); color: var(--color-text-secondary); font-weight: var(--font-weight-medium); }
+  .summary-card-value { font-size: var(--font-size-2xl); font-weight: var(--font-weight-bold); color: var(--color-text-primary); font-family: var(--font-mono); line-height: var(--line-height-tight); }
+  .summary-card-change { display: flex; align-items: center; gap: var(--space-1); font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); font-family: var(--font-mono); }
+  .summary-card-change.up { color: var(--color-stock-up); }
+  .summary-card-change svg { width: 12px; height: 12px; }
+
+  /* ─── PORTFOLIO TABS ─── */
+  .portfolio-tabs { display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-5); padding-bottom: var(--space-2); position: sticky; top: calc(var(--nav-height) + var(--market-ticker-height, 0px)); z-index: 100; background: var(--color-bg); padding-top: var(--space-2); overflow: visible; border-bottom: 1px solid var(--color-divider); }
+  .portfolio-tabs-scroll { display: flex; align-items: center; gap: var(--space-2); overflow-x: auto; scrollbar-width: none; flex: 1; min-width: 0; }
+  .portfolio-tabs-scroll::-webkit-scrollbar { display: none; }
+  .portfolio-tabs-dropdown { display: none; width: 100%; height: 40px; padding: 0 var(--space-3); background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-sm); font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); color: var(--color-text-primary); cursor: pointer; align-items: center; justify-content: space-between; gap: var(--space-2); user-select: none; }
+  .portfolio-tabs-dropdown:focus { border-color: var(--color-primary); outline: none; box-shadow: 0 0 0 3px var(--color-primary-subtle); }
+  .portfolio-tabs-dropdown svg { width: 14px; height: 14px; flex-shrink: 0; color: var(--color-text-secondary); transition: transform var(--duration-fast); }
+  .portfolio-tabs-dropdown.open svg.chevron { transform: rotate(180deg); }
+  .portfolio-dropdown-menu { position: absolute; top: calc(100% + var(--space-1)); left: 0; right: 0; max-height: 280px; overflow-y: auto; background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-md); box-shadow: var(--shadow-lg); z-index: 300; display: none; padding: var(--space-1); }
+  .portfolio-dropdown-menu.open { display: block; animation: dropdown-enter var(--duration-normal) var(--ease-out); }
+  .portfolio-dropdown-option { display: flex; align-items: center; gap: var(--space-3); width: 100%; padding: var(--space-3); font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); color: var(--color-text-primary); border-radius: var(--radius-sm); transition: background var(--duration-fast); text-align: left; cursor: pointer; background: none; border: none; }
+  .portfolio-dropdown-option:hover { background: var(--color-bg-subtle); }
+  .portfolio-dropdown-option.active { background: var(--color-primary-subtle); color: var(--color-primary); }
+  .portfolio-dropdown-option .option-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .portfolio-dropdown-option .option-currency { font-size: var(--font-size-xs); font-weight: var(--font-weight-semibold); padding: 1px 6px; border-radius: var(--radius-full); background: var(--color-bg-subtle); color: var(--color-text-secondary); text-transform: uppercase; flex-shrink: 0; }
+  .portfolio-dropdown-option.active .option-currency { background: var(--color-primary-muted); color: var(--color-primary); }
+  .portfolio-dropdown-divider { height: 1px; background: var(--color-divider); margin: var(--space-1) var(--space-2); }
+  .portfolio-dropdown-option.new-portfolio { color: var(--color-text-secondary); border-top: 1px solid var(--color-divider); border-radius: 0; margin-top: var(--space-1); padding-top: calc(var(--space-3) + 1px); }
+  .portfolio-dropdown-option.new-portfolio:hover { color: var(--color-primary); background: var(--color-primary-subtle); }
+  .portfolio-dropdown-option.new-portfolio svg { width: 14px; height: 14px; flex-shrink: 0; }
+  .portfolio-tab-group { display: flex; align-items: center; gap: var(--space-2); padding: 6px var(--space-3); font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); color: var(--color-text-secondary); background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-full); white-space: nowrap; transition: background var(--duration-fast), border-color var(--duration-fast), color var(--duration-fast); cursor: pointer; user-select: none; }
+  .portfolio-tab-group:hover { background: var(--color-primary-subtle); border-color: var(--color-primary); color: var(--color-primary); }
+  .portfolio-tab-group:active { transform: scale(0.97); }
+  .portfolio-tab-group[aria-selected="true"] { background: var(--color-primary); border-color: var(--color-primary); color: var(--color-text-inverse); }
+  .portfolio-tab-group[aria-selected="true"] .tab-currency { background: rgba(255,255,255,0.2); color: var(--color-text-inverse); }
+  .portfolio-tab-group[aria-selected="true"] .tab-drag { color: rgba(255,255,255,0.6); }
+  .portfolio-tab-group[aria-selected="true"] .tab-edit { color: rgba(255,255,255,0.6); display: inline-flex; }
+  .tab-drag { cursor: grab; color: var(--color-text-tertiary); display: inline-flex; font-size: 14px; line-height: 1; }
+  .tab-currency { font-size: var(--font-size-xs); font-weight: var(--font-weight-semibold); padding: 1px 6px; border-radius: var(--radius-full); background: var(--color-bg-subtle); color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: 0.3px; }
+  .tab-edit { display: none; align-items: center; color: var(--color-text-tertiary); transition: color var(--duration-fast); background: none; border: none; padding: 2px; }
+  .portfolio-tab-group:hover .tab-edit { display: inline-flex; }
+  .tab-edit:hover { color: var(--color-primary); }
+  .tab-edit svg { width: 12px; height: 12px; }
+  .portfolio-add-wrapper { position: relative; display: flex; align-items: center; gap: var(--space-2); }
+  .portfolio-add-btn { display: flex; align-items: center; gap: var(--space-1); padding: 6px var(--space-3); font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); color: var(--color-text-tertiary); background: var(--color-bg-elevated); border: 1px dashed var(--color-border); border-radius: var(--radius-full); transition: all var(--duration-normal) var(--ease-out); white-space: nowrap; }
+  .portfolio-add-btn:hover { border-color: var(--color-primary); color: var(--color-primary); background: var(--color-primary-subtle); }
+  .portfolio-add-btn svg { width: 14px; height: 14px; }
+  .portfolio-reorder-btn { display: inline-flex; align-items: center; gap: var(--space-1); padding: 6px var(--space-3); font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); color: var(--color-text-tertiary); background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-full); transition: all var(--duration-normal) var(--ease-out); white-space: nowrap; cursor: pointer; }
+  .portfolio-reorder-btn:hover { border-color: var(--color-primary); color: var(--color-primary); background: var(--color-primary-subtle); }
+  .portfolio-reorder-btn svg { width: 14px; height: 14px; }
+  .portfolio-reorder-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  /* Reorder modal — floats above nav + ticker strip (both sit above --z-modal) */
+  #reorder-modal { z-index: 1100; padding: var(--space-4); background: rgba(0,0,0,0.45); }
+  #reorder-modal .modal-card { max-width: 440px; width: calc(100% - 32px); max-height: 85vh; display: flex; flex-direction: column; }
+  #reorder-modal .modal-body { display: flex; flex-direction: column; min-height: 0; }
+  .reorder-list { display: flex; flex-direction: column; gap: var(--space-2); margin: var(--space-3) 0 var(--space-4); max-height: 50vh; overflow-y: auto; padding-right: 2px; }
+  .reorder-item { display: flex; align-items: center; gap: var(--space-2); min-height: 48px; padding: var(--space-2) var(--space-3); background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius-sm); }
+  .reorder-item:focus { border-color: var(--color-primary); outline: none; box-shadow: 0 0 0 3px var(--color-primary-subtle); }
+  .reorder-item.dragging { opacity: 0.5; border-style: dashed; }
+  .reorder-item .drag-handle { cursor: grab; color: var(--color-text-tertiary); font-size: 16px; padding: 8px 4px; touch-action: none; line-height: 1; }
+  .reorder-item .reorder-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); color: var(--color-text-primary); }
+  .reorder-item .reorder-currency { font-size: var(--font-size-xs); font-weight: var(--font-weight-semibold); padding: 1px 6px; border-radius: var(--radius-full); background: var(--color-bg-subtle); color: var(--color-text-secondary); text-transform: uppercase; flex-shrink: 0; }
+  .reorder-item .reorder-move { display: flex; flex-direction: column; gap: 4px; flex-shrink: 0; }
+  .reorder-item .reorder-move button { width: 32px; height: 24px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--color-border); border-radius: var(--radius-xs); background: var(--color-bg-elevated); color: var(--color-text-secondary); cursor: pointer; font-size: 11px; line-height: 1; }
+  .reorder-item .reorder-move button:hover:not(:disabled) { border-color: var(--color-primary); color: var(--color-primary); }
+  .reorder-item .reorder-move button:disabled { opacity: 0.35; cursor: not-allowed; }
+  .reorder-help { font-size: var(--font-size-xs); color: var(--color-text-secondary); line-height: var(--line-height-normal); margin-bottom: var(--space-1); }
+  .reorder-actions { display: flex; justify-content: flex-end; gap: var(--space-3); padding-top: var(--space-3); border-top: 1px solid var(--color-divider); margin-top: auto; }
+  /* Mobile dropdown footer: actions separated from selectable options */
+  .portfolio-dropdown-footer { border-top: 1px solid var(--color-divider); margin-top: var(--space-1); padding-top: var(--space-1); display: flex; flex-direction: column; gap: 2px; }
+  .portfolio-dropdown-action { display: flex; align-items: center; gap: var(--space-3); width: 100%; min-height: 44px; padding: var(--space-2) var(--space-3); font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); color: var(--color-text-secondary); border-radius: var(--radius-sm); background: none; border: none; cursor: pointer; text-align: left; }
+  .portfolio-dropdown-action:hover { background: var(--color-bg-subtle); color: var(--color-text-primary); }
+  .portfolio-dropdown-action svg { width: 14px; height: 14px; flex-shrink: 0; }
+  .portfolio-dropdown-action.manage-order { color: var(--color-primary); }
+  .portfolio-dropdown-action.manage-order:hover { background: var(--color-primary-subtle); color: var(--color-primary); }
+  .portfolio-dropdown-action[aria-expanded="true"] .expand-chevron { transform: rotate(180deg); }
+  .portfolio-dropdown-action .expand-chevron { margin-left: auto; transition: transform var(--duration-fast); }
+  .portfolio-dropdown-submenu { display: none; flex-direction: column; gap: 2px; padding: 2px 0 2px var(--space-6); }
+  .portfolio-dropdown-submenu.open { display: flex; }
+  .portfolio-dropdown-submenu .currency-option { min-height: 44px; padding: var(--space-2) var(--space-3); }
+  .portfolio-dropdown-submenu .currency-option .flag { font-size: 18px; }
+  .new-portfolio-dropdown { position: absolute; top: calc(100% + var(--space-1)); left: 0; min-width: 240px; background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-md); box-shadow: var(--shadow-lg); z-index: 300; display: none; padding: var(--space-3); }
+  .new-portfolio-dropdown.open { display: block; animation: dropdown-enter var(--duration-normal) var(--ease-out); }
+  .new-portfolio-dropdown h4 { font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin-bottom: var(--space-3); }
+  .currency-option { display: flex; align-items: center; gap: var(--space-3); width: 100%; padding: var(--space-3); font-size: var(--font-size-sm); color: var(--color-text-primary); border-radius: var(--radius-sm); transition: background var(--duration-fast); text-align: left; }
+  .currency-option:hover { background: var(--color-bg-subtle); }
+  .currency-option .flag { font-size: 20px; }
+  .currency-option-info .label { font-weight: var(--font-weight-medium); display: block; }
+  .currency-option-info .desc { font-size: var(--font-size-xs); color: var(--color-text-secondary); display: block; }
+  @keyframes dropdown-enter { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* ─── STATS BAR ─── */
+  .stats-bar { display: flex; align-items: center; gap: var(--space-6); padding: var(--space-3) var(--space-5); background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-md); margin-bottom: var(--space-5); overflow-x: auto; white-space: nowrap; }
+  .stats-bar .btn-delete-portfolio { margin-left: auto; flex-shrink: 0; height: 28px; padding: 0 var(--space-3); font-size: var(--font-size-xs); font-weight: var(--font-weight-semibold); color: var(--color-error); background: transparent; border: 1px solid var(--color-error); border-radius: var(--radius-sm); transition: all var(--duration-fast); white-space: nowrap; display: inline-flex; align-items: center; gap: var(--space-1); cursor: pointer; }
+  .stats-bar .btn-delete-portfolio:hover { background: var(--color-error-subtle); }
+  .stats-bar .btn-delete-portfolio:active { transform: scale(0.97); }
+  .stats-bar .btn-delete-portfolio svg { width: 12px; height: 12px; flex-shrink: 0; }
+  .stats-bar-item { display: flex; flex-direction: column; gap: 2px; }
+  .stats-bar-label { font-size: var(--font-size-xs); color: var(--color-text-secondary); font-weight: var(--font-weight-medium); text-transform: uppercase; letter-spacing: 0.4px; }
+  .stats-bar-value { font-size: var(--font-size-base); font-weight: var(--font-weight-semibold); font-family: var(--font-mono); color: var(--color-text-primary); }
+  .stats-bar-value.up { color: var(--color-stock-up); }
+  .stats-bar-value.down { color: var(--color-stock-down); }
+  .stats-bar-divider { width: 1px; height: 28px; background: var(--color-divider); flex-shrink: 0; }
+
+  /* ─── PRICE UNAVAILABLE STATES ─── */
+  .price-na { color: var(--color-text-tertiary); font-style: italic; font-size: var(--font-size-xs); }
+  .price-unavailable { opacity: 0.7; }
+  .price-unavailable .price-value { color: var(--color-text-tertiary); }
+  .price-warning-banner { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-4); margin-bottom: var(--space-4); background: var(--color-warning-subtle); border: 1px solid rgba(255, 149, 0, 0.25); border-radius: var(--radius-sm); font-size: var(--font-size-sm); color: var(--color-text-primary); }
+  .price-warning-banner svg { width: 14px; height: 14px; flex-shrink: 0; color: var(--color-warning); }
+
+  /* ─── TRADE FORM (ADD/EDIT POSITION) ─── */
+  .trade-form { display: flex; align-items: flex-end; gap: var(--space-3); padding: var(--space-4) var(--space-5); padding-bottom: calc(var(--space-4) + 22px); background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-md); margin-bottom: var(--space-5); flex-wrap: nowrap; }
+  .trade-form-group { display: flex; flex-direction: column; gap: 2px; flex: 1 1 0; min-width: 0; position: relative; }
+  .trade-form-label { font-size: var(--font-size-xs); color: var(--color-text-secondary); font-weight: var(--font-weight-medium); text-transform: uppercase; letter-spacing: 0.4px; }
+  .trade-input-wrap { position: relative; display: flex; align-items: center; min-width: 0; }
+  .trade-input-prefix { position: absolute; left: var(--space-2); font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); color: var(--color-text-tertiary); pointer-events: none; }
+  .trade-input { height: 36px; padding: 0 var(--space-3); background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius-sm); font-size: var(--font-size-sm); color: var(--color-text-primary); transition: border-color var(--duration-normal) var(--ease-out), box-shadow var(--duration-normal) var(--ease-out); width: 100%; min-width: 0; box-sizing: border-box; }
+  .trade-date { color-scheme: light; }
+  [data-theme="dark"] .trade-date { color-scheme: dark; }
+  .trade-input:focus { border-color: var(--color-primary); outline: none; box-shadow: 0 0 0 3px var(--color-primary-subtle); }
+  .trade-input.has-prefix { padding-left: var(--space-5); }
+  .trade-input.ticker-input { width: 100%; }
+  .trade-ticker-row { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
+  .ticker-validation { font-size: 15px; flex-shrink: 0; min-width: 18px; text-align: center; }
+  .ticker-validation.valid { color: var(--color-success); }
+  .ticker-validation.invalid { color: var(--color-error); }
+  .ticker-validation.loading { color: var(--color-text-secondary); }
+  .ticker-info-line { font-size: var(--font-size-xs); color: var(--color-text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-height: 16px; position: absolute; bottom: -20px; left: 0; right: 0; z-index: 1; }
+  .btn-buy { height: 36px; padding: 0 var(--space-5); background: var(--color-success); color: var(--color-text-inverse); font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); border-radius: var(--radius-sm); transition: filter var(--duration-fast), transform var(--duration-fast); border: none; cursor: pointer; flex-shrink: 0; white-space: nowrap; }
+  .btn-buy:hover { filter: brightness(0.94); }
+  .btn-buy:active { transform: scale(0.97); }
+  .btn-sell { height: 36px; padding: 0 var(--space-5); background: transparent; color: var(--color-error); font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); border: 1.5px solid var(--color-error); border-radius: var(--radius-sm); transition: all var(--duration-fast); cursor: pointer; flex-shrink: 0; white-space: nowrap; }
+  .btn-sell:hover { background: var(--color-error-subtle); }
+  .btn-sell:active { transform: scale(0.97); }
+
+  /* ─── ACTION BAR (FLOATING PILLS) ─── */
+  .action-bar { display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-4); overflow-x: auto; padding-bottom: var(--space-1); scrollbar-width: none; }
+  .action-bar::-webkit-scrollbar { display: none; }
+  .action-checkbox { width: 16px; height: 16px; accent-color: var(--color-primary); cursor: pointer; flex-shrink: 0; }
+  .action-pill { display: inline-flex; align-items: center; gap: var(--space-2); padding: 6px var(--space-3); font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); color: var(--color-text-secondary); background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-full); white-space: nowrap; transition: background var(--duration-fast), border-color var(--duration-fast), color var(--duration-fast); cursor: pointer; user-select: none; flex-shrink: 0; }
+  .action-pill:hover { background: var(--color-primary-subtle); border-color: var(--color-primary); color: var(--color-primary); }
+  .action-pill:active { transform: scale(0.97); }
+  .action-pill:disabled { opacity: 0.45; cursor: not-allowed; }
+  .action-pill:disabled:hover { background: var(--color-bg-elevated); border-color: var(--color-border); color: var(--color-text-secondary); transform: none; }
+  .action-pill svg { width: 14px; height: 14px; flex-shrink: 0; }
+  #refresh-btn:disabled { opacity: 0.6; cursor: not-allowed; pointer-events: none; }
+  .action-pill .pill-count { font-size: var(--font-size-xs); font-weight: var(--font-weight-semibold); padding: 1px 6px; border-radius: var(--radius-full); background: var(--color-bg-subtle); color: var(--color-text-secondary); }
+  .action-pill:hover .pill-count { background: var(--color-primary-muted); color: var(--color-primary); }
+  .action-pill.destructive { color: var(--color-error); border-color: var(--color-error); }
+  .action-pill.destructive:hover { background: var(--color-error-subtle); color: var(--color-error); }
+  .action-pill.destructive .pill-count { background: var(--color-error-subtle); color: var(--color-error); }
+  .action-pill.destructive:hover .pill-count { background: var(--color-error); color: var(--color-text-inverse); }
+  .action-pill.primary { background: var(--color-primary); border-color: var(--color-primary); color: var(--color-text-inverse); }
+  .action-pill.primary:hover { background: var(--color-primary-hover); border-color: var(--color-primary-hover); }
+  .action-pill.primary .pill-count { background: rgba(255,255,255,0.2); color: var(--color-text-inverse); }
+  /* Move hidden (CSS-only, reversible): Delete slides into its spot, Refresh shifts left via flex */
+  #move-btn { display: none !important; }
+
+  /* ─── CONTENT GRID ─── */
+  .content-grid { display: grid; grid-template-columns: 1fr 340px; gap: var(--space-6); align-items: start; }
+
+  /* ─── POSITIONS TABLE ─── */
+  .positions-section { background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-md); overflow: hidden; }
+  .positions-header { display: flex; align-items: center; justify-content: space-between; padding: var(--space-4) var(--space-5); border-bottom: 1px solid var(--color-divider); }
+  .positions-title { font-size: var(--font-size-md); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); }
+  .positions-count { font-size: var(--font-size-sm); color: var(--color-text-secondary); font-weight: var(--font-weight-medium); }
+  .positions-table-wrapper { overflow-x: auto; }
+  .positions-table { width: 100%; border-collapse: collapse; font-size: var(--font-size-sm); }
+  .positions-table thead th { padding: var(--space-3) var(--space-4); text-align: left; font-weight: var(--font-weight-semibold); color: var(--color-text-secondary); font-size: var(--font-size-xs); text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--color-divider); background: var(--color-bg); white-space: nowrap; user-select: none; }
+  .positions-table thead th.text-right { text-align: right; }
+  .positions-table thead th.sortable { cursor: pointer; }
+  .positions-table thead th.sortable:hover { color: var(--color-primary); }
+.positions-table thead th.sorted-asc::after { content: ' ▲'; font-size: 8px; }
+.positions-table thead th.sorted-desc::after { content: ' ▼'; font-size: 8px; }
+  .positions-table tbody tr { border-bottom: 1px solid var(--color-divider); transition: background var(--duration-fast); cursor: pointer; }
+  .positions-table tbody tr:last-child { border-bottom: none; }
+  .positions-table tbody tr:hover { background: var(--color-bg); }
+  .positions-table tbody tr.selected { background: var(--color-primary-subtle); }
+  .positions-table td { padding: var(--space-3) var(--space-4); white-space: nowrap; vertical-align: middle; }
+  .positions-table td.text-right { text-align: right; }
+  .ticker-cell { display: flex; flex-direction: column; gap: 1px; }
+  .ticker-symbol-link { font-weight: var(--font-weight-semibold); color: var(--color-text-primary); font-family: var(--font-mono); font-size: var(--font-size-sm); cursor: pointer; background: none; border: none; padding: 0; text-align: left; }
+  .ticker-symbol-link:hover { text-decoration: underline; }
+  .company-name { color: var(--color-text-secondary); font-size: var(--font-size-xs); max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .qty-value { font-family: var(--font-mono); font-weight: var(--font-weight-medium); }
+  .price-value { font-family: var(--font-mono); }
+  .pnl-cell { display: flex; flex-direction: row; align-items: baseline; justify-content: flex-end; gap: 6px; white-space: nowrap; }
+  .pnl-value { font-family: var(--font-mono); font-weight: var(--font-weight-medium); font-variant-numeric: tabular-nums; }
+  .pnl-value.up { color: var(--color-stock-up); }
+  .pnl-value.down { color: var(--color-stock-down); }
+  .pnl-pct { font-family: var(--font-mono); font-size: 11px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .pnl-pct.up { color: var(--color-stock-up); }
+  .pnl-pct.down { color: var(--color-stock-down); }
+  .cost-value { font-family: var(--font-mono); color: var(--color-text-secondary); }
+  .market-value { font-family: var(--font-mono); font-weight: var(--font-weight-medium); }
+  .allocation-bar { display: flex; align-items: center; gap: var(--space-2); }
+  .allocation-track { width: 50px; height: 6px; background: var(--color-bg-subtle); border-radius: var(--radius-full); overflow: hidden; }
+  .allocation-fill { height: 100%; border-radius: var(--radius-full); background: var(--color-primary); transition: width var(--duration-normal) var(--ease-out); }
+  .allocation-text { font-family: var(--font-mono); font-size: var(--font-size-xs); color: var(--color-text-secondary); min-width: 36px; }
+  .notes-cell { max-width: 200px; font-size: var(--font-size-xs); color: var(--color-text-primary); cursor: pointer; background: none; border: 1px solid transparent; padding: 4px 8px; border-radius: var(--radius-sm); transition: all 0.2s; white-space: pre-line; text-align: left; overflow: hidden; text-overflow: ellipsis; }
+  .notes-cell:hover { background: var(--color-bg-subtle); border-color: var(--color-border); }
+  .notes-cell.empty { color: var(--color-text-tertiary); font-style: italic; }
+  .notes-placeholder { color: var(--color-text-tertiary); font-style: italic; }
+  .notes-earnings-prefix { color: var(--color-text-secondary); font-size: var(--font-size-xs); display: block; }
+  .notes-user-text { display: block; }
+  .row-checkbox { width: 16px; height: 16px; accent-color: var(--color-primary); cursor: pointer; }
+  .sparkline-cell svg { display: block; }
+  .actions-cell { display: flex; align-items: center; gap: 4px; }
+  .edit-position-btn { background: none; border: none; cursor: pointer; padding: 4px; color: var(--color-text-secondary); opacity: 0.6; transition: opacity var(--duration-fast), color var(--duration-fast); }
+  .edit-position-btn:hover { opacity: 1; color: var(--color-primary); }
+  .edit-position-btn svg { width: 14px; height: 14px; }
+
+  /* ─── DONUT CHART ─── */
+  .donut-panel { background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-5); }
+  .donut-panel-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-4); }
+  .donut-panel-title { font-size: var(--font-size-md); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); }
+  .donut-container { display: flex; align-items: center; gap: var(--space-5); }
+  .donut-svg { flex-shrink: 0; }
+  .donut-legend { display: flex; flex-direction: column; gap: var(--space-2); flex: 1; min-width: 0; }
+  .donut-legend-item { display: flex; align-items: center; gap: var(--space-2); }
+  .donut-legend-dot { width: 10px; height: 10px; border-radius: var(--radius-full); flex-shrink: 0; }
+  .donut-legend-label { flex: 1; font-size: var(--font-size-sm); color: var(--color-text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .donut-legend-pct { font-family: var(--font-mono); font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); min-width: 40px; text-align: right; }
+
+  /* ─── SECTOR PANEL ─── */
+  .sector-panel { background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-md); }
+  .sector-panel-header { display: flex; align-items: center; justify-content: space-between; padding: var(--space-4) var(--space-5); cursor: pointer; user-select: none; transition: background var(--duration-fast); }
+  .sector-panel-header:hover { background: var(--color-bg); }
+  .sector-panel-title { font-size: var(--font-size-md); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); }
+  .sector-panel-chevron { color: var(--color-text-tertiary); transition: transform var(--duration-normal) var(--ease-out); }
+  .sector-panel-chevron svg { width: 16px; height: 16px; }
+  .sector-panel-header[aria-expanded="false"] .sector-panel-chevron { transform: rotate(-90deg); }
+  .sector-panel-body { padding: 0 var(--space-5) var(--space-5); }
+  .sector-panel-body.collapsed { display: none; }
+
+  /* ─── P/L HISTORY PANEL ─── */
+  .pnl-panel { background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-md); }
+  .pnl-panel-header { display: flex; align-items: center; justify-content: space-between; padding: var(--space-4) var(--space-5); }
+  .pnl-panel-title { font-size: var(--font-size-md); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); }
+  .pnl-panel-body { padding: 0 var(--space-5) var(--space-5); }
+
+  /* Chart container */
+  .pnl-chart-container { position: relative; width: 100%; height: 200px; margin-bottom: var(--space-4); background: var(--color-bg); border-radius: var(--radius-sm); padding: var(--space-2); overflow: hidden; }
+
+  /* Tooltip */
+  .pnl-tooltip { position: absolute; background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-sm); padding: var(--space-2) var(--space-3); box-shadow: var(--shadow-md); pointer-events: none; z-index: 10; min-width: 130px; font-family: var(--font-mono); line-height: 1.25; }
+  .pnl-tooltip-date { font-size: var(--font-size-xs); color: var(--color-text-secondary); font-weight: var(--font-weight-medium); margin-bottom: 1px; }
+  .pnl-tooltip-value { font-family: var(--font-mono); font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); }
+  .pnl-tooltip-value.up { color: var(--color-stock-up); }
+  .pnl-tooltip-value.down { color: var(--color-stock-down); }
+
+  /* Summary */
+  .pnl-summary { display: flex; align-items: baseline; gap: var(--space-3); padding-top: var(--space-3); border-top: 1px solid var(--color-divider); }
+  .pnl-summary-value { font-family: var(--font-mono); font-size: var(--font-size-lg); font-weight: var(--font-weight-bold); letter-spacing: var(--letter-spacing-tight); line-height: var(--line-height-tight); }
+  .pnl-summary-value.up { color: var(--color-stock-up); }
+  .pnl-summary-value.down { color: var(--color-stock-down); }
+  .pnl-summary-pct { font-family: var(--font-mono); font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); }
+  .pnl-summary-pct.up { color: var(--color-stock-up); }
+  .pnl-summary-pct.down { color: var(--color-stock-down); }
+  .pnl-summary-label { font-size: var(--font-size-xs); color: var(--color-text-tertiary); font-weight: var(--font-weight-medium); text-transform: uppercase; letter-spacing: var(--letter-spacing-wide); margin-left: auto; }
+
+  /* Empty state */
+  .pnl-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: var(--space-8) var(--space-4); text-align: center; }
+  .pnl-empty-icon { width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; background: var(--color-bg-subtle); border-radius: var(--radius-lg); margin-bottom: var(--space-4); color: var(--color-text-tertiary); }
+  .pnl-empty-icon svg { width: 24px; height: 24px; }
+  .pnl-empty-text { font-size: var(--font-size-sm); color: var(--color-text-tertiary); line-height: var(--line-height-normal); max-width: 220px; }
+
+  /* Loading skeleton */
+  .pnl-skeleton-chart { width: 100%; height: 160px; background: linear-gradient(90deg, var(--color-bg-subtle) 25%, var(--color-divider) 50%, var(--color-bg-subtle) 75%); background-size: 200% 100%; animation: skeleton-pulse 1.5s ease-in-out infinite; border-radius: var(--radius-sm); margin-bottom: var(--space-4); }
+  .pnl-skeleton-row { display: flex; gap: var(--space-3); align-items: baseline; padding-top: var(--space-3); border-top: 1px solid var(--color-divider); }
+  .pnl-skeleton-value { width: 100px; height: 22px; background: linear-gradient(90deg, var(--color-bg-subtle) 25%, var(--color-divider) 50%, var(--color-bg-subtle) 75%); background-size: 200% 100%; animation: skeleton-pulse 1.5s ease-in-out infinite; border-radius: var(--radius-xs); }
+  .pnl-skeleton-pct { width: 60px; height: 16px; background: linear-gradient(90deg, var(--color-bg-subtle) 25%, var(--color-divider) 50%, var(--color-bg-subtle) 75%); background-size: 200% 100%; animation: skeleton-pulse 1.5s ease-in-out infinite 0.1s; border-radius: var(--radius-xs); }
+
+  /* Error state */
+  .pnl-error { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: var(--space-6) var(--space-4); text-align: center; }
+  .pnl-error-icon { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: var(--color-error-subtle); border-radius: var(--radius-lg); margin-bottom: var(--space-3); color: var(--color-error); }
+  .pnl-error-icon svg { width: 20px; height: 20px; }
+  .pnl-error-text { font-size: var(--font-size-sm); color: var(--color-text-secondary); margin-bottom: var(--space-3); }
+  .pnl-retry-btn { padding: var(--space-2) var(--space-4); font-size: var(--font-size-xs); font-weight: var(--font-weight-semibold); color: var(--color-error); border: 1px solid var(--color-error); border-radius: var(--radius-sm); transition: all var(--duration-fast); background: none; cursor: pointer; }
+  .pnl-retry-btn:hover { background: var(--color-error); color: var(--color-text-inverse); }
+  .sector-bar { display: flex; height: 12px; border-radius: var(--radius-full); overflow: hidden; margin-bottom: var(--space-4); }
+  .sector-bar-segment { transition: flex var(--duration-normal) var(--ease-out); }
+  .sector-legend { display: flex; flex-direction: column; gap: var(--space-3); }
+  .sector-legend-item { display: flex; align-items: center; gap: var(--space-3); }
+  .sector-legend-dot { width: 10px; height: 10px; border-radius: var(--radius-full); flex-shrink: 0; }
+  .sector-legend-label { flex: 1; font-size: var(--font-size-sm); color: var(--color-text-secondary); }
+  .sector-legend-value { font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); font-family: var(--font-mono); color: var(--color-text-primary); }
+
+  /* ─── MODAL (shared) ─── */
+  .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: var(--z-modal); display: none; align-items: center; justify-content: center; opacity: 0; transition: opacity var(--duration-normal) var(--ease-out); }
+  .modal-backdrop.open { display: flex; opacity: 1; }
+  .modal-card { background: var(--color-bg-elevated); border-radius: var(--radius-lg); box-shadow: var(--shadow-xl); width: 100%; max-height: 90vh; overflow-y: auto; animation: modal-enter var(--duration-normal) var(--ease-out); }
+  @keyframes modal-enter { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+  .modal-header { display: flex; align-items: center; justify-content: space-between; padding: var(--space-5) var(--space-6); border-bottom: 1px solid var(--color-divider); }
+  .modal-title { font-size: var(--font-size-lg); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); }
+  .modal-close { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-sm); color: var(--color-text-secondary); transition: background var(--duration-fast); }
+  .modal-close:hover { background: var(--color-bg-subtle); }
+  .modal-close svg { width: 18px; height: 18px; }
+  .modal-body { padding: var(--space-6); }
+  .btn-ghost { display: inline-flex; align-items: center; gap: var(--space-2); padding: var(--space-3) var(--space-5); background: transparent; color: var(--color-text-secondary); font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); border-radius: var(--radius-sm); border: 1px solid var(--color-border); transition: all var(--duration-fast); cursor: pointer; }
+  /* Safe vertical centering: identical when content fits; tall Live content
+     top-aligns and scrolls instead of sliding cut-off behind the top nav. */
+  /* P/L chart tooltip in modal */
+  .btn-ghost:hover { background: var(--color-bg-subtle); color: var(--color-text-primary); }
+
+  /* ─── ADD/EDIT POSITION MODAL ─── */
+  .position-modal .modal-card { max-width: 480px; }
+  .position-form { display: flex; flex-direction: column; gap: var(--space-4); }
+  .position-form-group { display: flex; flex-direction: column; gap: var(--space-1); }
+  .position-form-label { font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); color: var(--color-text-secondary); }
+  .position-form-input { height: 40px; padding: 0 var(--space-3); background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius-sm); font-size: var(--font-size-sm); color: var(--color-text-primary); transition: border-color var(--duration-normal) var(--ease-out), box-shadow var(--duration-normal) var(--ease-out); }
+  .position-form-input:focus { border-color: var(--color-primary); outline: none; box-shadow: 0 0 0 3px var(--color-primary-subtle); }
+  .position-form-input.has-error { border-color: var(--color-error); }
+  .position-form-error { font-size: var(--font-size-xs); color: var(--color-error); display: none; }
+  .position-form-error.visible { display: block; }
+  .position-form-actions { display: flex; justify-content: flex-end; gap: var(--space-3); margin-top: var(--space-2); }
+
+  /* ─── MOVE MODAL ─── */
+  .move-modal .modal-card { max-width: 520px; }
+  .move-positions-list { background: var(--color-bg); border-radius: var(--radius-sm); padding: var(--space-3) var(--space-4); margin-bottom: var(--space-4); font-family: var(--font-mono); font-size: var(--font-size-sm); color: var(--color-text-primary); }
+  .move-select { width: 100%; height: 40px; padding: 0 var(--space-3); background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius-sm); font-size: var(--font-size-sm); color: var(--color-text-primary); margin-bottom: var(--space-4); appearance: auto; }
+  .move-select:focus { border-color: var(--color-primary); outline: none; box-shadow: 0 0 0 3px var(--color-primary-subtle); }
+  .move-warning { display: flex; align-items: flex-start; gap: var(--space-3); padding: var(--space-3) var(--space-4); background: var(--color-warning-subtle); border: 1px solid rgba(255, 149, 0, 0.2); border-radius: var(--radius-sm); margin-bottom: var(--space-4); font-size: var(--font-size-sm); color: var(--color-text-primary); }
+  .move-warning svg { width: 16px; height: 16px; color: var(--color-warning); flex-shrink: 0; margin-top: 1px; }
+  .move-error { display: flex; align-items: flex-start; gap: var(--space-3); padding: var(--space-3) var(--space-4); background: var(--color-error-subtle); border: 1px solid rgba(255, 59, 48, 0.2); border-radius: var(--radius-sm); margin-bottom: var(--space-4); font-size: var(--font-size-sm); color: var(--color-error); }
+  .move-error svg { width: 16px; height: 16px; color: var(--color-error); flex-shrink: 0; margin-top: 1px; }
+  .move-actions { display: flex; justify-content: flex-end; gap: var(--space-3); }
+
+  /* ─── DELETE CONFIRM MODAL ─── */
+  .delete-modal .modal-card { max-width: 420px; }
+  .delete-modal-body { display: flex; flex-direction: column; gap: var(--space-3); }
+  .delete-modal-warning { font-size: var(--font-size-sm); color: var(--color-text-secondary); line-height: var(--line-height-normal); }
+  .delete-modal-warning strong { color: var(--color-text-primary); font-weight: var(--font-weight-semibold); }
+  .delete-modal-actions { display: flex; justify-content: flex-end; gap: var(--space-3); margin-top: var(--space-2); }
+  .btn-danger { display: inline-flex; align-items: center; gap: var(--space-2); padding: var(--space-3) var(--space-5); background: var(--color-error); color: var(--color-text-inverse); font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); border-radius: var(--radius-sm); border: none; cursor: pointer; transition: filter var(--duration-fast), transform var(--duration-fast); }
+  .btn-danger:hover { filter: brightness(0.92); }
+  .btn-danger:active { transform: scale(0.97); }
+
+  /* ─── FEEDBACK STATES ─── */
+  .empty-state { display: none; flex-direction: column; align-items: center; justify-content: center; padding: var(--space-12) var(--space-6); text-align: center; }
+  .empty-state.visible { display: flex; }
+  .empty-state-icon { width: 64px; height: 64px; display: flex; align-items: center; justify-content: center; background: var(--color-bg-subtle); border-radius: var(--radius-lg); margin-bottom: var(--space-5); color: var(--color-text-tertiary); }
+  .empty-state-icon svg { width: 32px; height: 32px; }
+  .empty-state-title { font-size: var(--font-size-xl); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin-bottom: var(--space-2); }
+  .empty-state-description { font-size: var(--font-size-base); color: var(--color-text-secondary); max-width: 400px; margin-bottom: var(--space-6); }
+
+  /* ─── INLINE EMPTY STATE (Issue 1) ─── */
+  .positions-inline-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: var(--space-12) var(--space-6); text-align: center; }
+  .inline-empty-icon { width: 64px; height: 64px; display: flex; align-items: center; justify-content: center; background: var(--color-bg-subtle); border-radius: var(--radius-lg); margin-bottom: var(--space-5); color: var(--color-text-tertiary); }
+  .inline-empty-icon svg { width: 32px; height: 32px; }
+  .inline-empty-title { font-size: var(--font-size-lg); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin-bottom: var(--space-2); }
+  .inline-empty-desc { font-size: var(--font-size-base); color: var(--color-text-secondary); margin-bottom: var(--space-6); }
+
+  /* ─── TICKER VALIDATION POSITIONING (inline, no layout shift) ─── */
+
+  /* ─── STATS BAR ALT CURRENCY (Issue 3) ─── */
+  .stats-bar-alt { font-size: var(--font-size-xs); color: var(--color-text-tertiary); font-family: var(--font-mono); }
+  .stats-bar-alt.up { color: var(--color-stock-up); }
+  .stats-bar-alt.down { color: var(--color-stock-down); }
+  .skeleton { display: none; }
+  .skeleton.visible { display: block; }
+  .skeleton-pulse { background: linear-gradient(90deg, var(--color-bg-subtle) 25%, var(--color-divider) 50%, var(--color-bg-subtle) 75%); background-size: 200% 100%; animation: skeleton-pulse 1.5s ease-in-out infinite; border-radius: var(--radius-sm); }
+  @keyframes skeleton-pulse { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+  .skeleton-card { background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-6); }
+  .skeleton-card .skeleton-label { width: 80px; height: 14px; margin-bottom: var(--space-3); }
+  .skeleton-card .skeleton-value { width: 140px; height: 28px; margin-bottom: var(--space-2); }
+  .skeleton-card .skeleton-change { width: 100px; height: 14px; }
+  .skeleton-table-row { display: flex; gap: var(--space-4); padding: var(--space-4); border-bottom: 1px solid var(--color-divider); }
+  .skeleton-table-row .skeleton-cell { height: 16px; }
+  .error-banner { display: none; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-5); background: rgba(255, 59, 48, 0.08); border: 1px solid rgba(255, 59, 48, 0.2); border-radius: var(--radius-md); margin-bottom: var(--space-4); }
+  .error-banner.visible { display: flex; animation: error-enter var(--duration-slow) var(--ease-out); }
+  @keyframes error-enter { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+  .error-banner-icon { width: 20px; height: 20px; color: var(--color-error); flex-shrink: 0; }
+  .error-banner-content { flex: 1; }
+  .error-banner-title { font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); color: var(--color-error); }
+  .error-banner-message { font-size: var(--font-size-xs); color: var(--color-text-secondary); }
+  .btn-retry { padding: var(--space-2) var(--space-3); font-size: var(--font-size-xs); font-weight: var(--font-weight-semibold); color: var(--color-error); border: 1px solid var(--color-error); border-radius: var(--radius-sm); transition: all var(--duration-fast); white-space: nowrap; background: none; cursor: pointer; }
+  .btn-retry:hover { background: var(--color-error); color: var(--color-text-inverse); }
+  .cad-rate-warning { display: none; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-5); background: rgba(255, 149, 0, 0.08); border: 1px solid rgba(255, 149, 0, 0.2); border-radius: var(--radius-md); margin-bottom: var(--space-4); }
+  .cad-rate-warning.visible { display: flex; animation: error-enter var(--duration-slow) var(--ease-out); }
+  .cad-rate-warning-icon { width: 18px; height: 18px; color: var(--color-warning); flex-shrink: 0; }
+  .cad-rate-warning-content { flex: 1; }
+  .cad-rate-warning-title { font-size: var(--font-size-xs); font-weight: var(--font-weight-semibold); color: var(--color-warning); }
+  .cad-rate-warning-message { font-size: var(--font-size-xs); color: var(--color-text-secondary); }
+  .hidden { display: none !important; }
+
+  /* ═══════════════════════════════════════════════════════════
+     DIRECTION B — TERMINAL PRECISION components (pilot scope)
+     Additive overrides: later rules win at equal specificity.
+     No selectors renamed, no HTML/JS contract touched.
+     ═══════════════════════════════════════════════════════════ */
+  /* Ticker: full console mono */
+  .ticker-symbol { letter-spacing: 0.04em; }
+  /* Summary: joined console grid, uniform cards */
+  .summary-cards { grid-template-columns: repeat(5, 1fr); gap: 0; border: 1px solid var(--color-border); border-radius: var(--radius-md); overflow: hidden; background: var(--color-bg-elevated); }
+  .summary-card { border: none; border-right: 1px solid var(--color-divider); border-radius: 0; padding: var(--space-4) var(--space-5); }
+  .summary-card:last-child { border-right: none; }
+  .summary-card:hover { border-color: var(--color-divider); box-shadow: none; background: var(--color-bg-inset); }
+  .summary-card-label { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; }
+  .summary-card-value { font-size: var(--font-size-xl); }
+  /* Tabs: underline console */
+  .portfolio-tabs { gap: var(--space-5); border-bottom: 1px solid var(--color-border); background: transparent; }
+  .portfolio-tab-group { background: none; border: none; border-bottom: 2px solid transparent; border-radius: 0; padding: var(--space-2) 2px; }
+  .portfolio-tab-group:hover { background: none; border-color: transparent; color: var(--color-text-primary); }
+  .portfolio-tab-group:active { transform: none; }
+  .portfolio-tab-group[aria-selected="true"] { background: none; border-color: var(--color-text-primary); color: var(--color-text-primary); font-weight: var(--font-weight-bold); }
+  .portfolio-tab-group[aria-selected="true"] .tab-currency { background: transparent; border: 1px solid currentColor; color: inherit; }
+  .portfolio-tab-group[aria-selected="true"] .tab-drag { color: inherit; opacity: 0.6; }
+  .portfolio-tab-group[aria-selected="true"] .tab-edit { color: inherit; }
+  .tab-currency { font-family: var(--font-mono); font-size: 10px; background: transparent; border: 1px solid var(--color-border); border-radius: 4px; letter-spacing: 0.08em; }
+  /* Stats: console line */
+  .stats-bar { gap: var(--space-6); font-family: var(--font-mono); }
+  .stats-bar-label { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.12em; }
+  .stats-bar-value { font-size: var(--font-size-sm); }
+  .stats-bar .btn-delete-portfolio { font-family: var(--font-mono); font-size: 11px; height: 36px; }
+  /* Trade: command line, hard-shadow focus */
+  .trade-form-label { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.12em; }
+  @media (min-width: 768px) { .trade-form .trade-form-label { margin-left: 1ch; } }
+  .trade-input { background: var(--color-bg-inset); font-family: var(--font-mono); font-size: 13px; }
+  .trade-input:focus { border-color: var(--color-text-primary); box-shadow: 2px 2px 0 var(--color-text-primary); }
+  .btn-buy, .btn-sell { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.06em; }
+  .btn-buy:active, .btn-sell:active { transform: translate(1px, 1px); }
+  /* Action pills: console chips */
+  .action-pill { font-family: var(--font-mono); font-size: 12px; border-radius: var(--radius-sm); }
+  .action-pill.primary { background: var(--color-text-primary); border-color: var(--color-text-primary); color: var(--color-bg); }
+  .action-pill.primary:hover { background: var(--color-text-primary); border-color: var(--color-text-primary); color: var(--color-bg); filter: brightness(1.15); }
+  .action-pill.primary .pill-count { background: rgba(128, 128, 128, 0.3); color: inherit; }
+  /* Table: dense console */
+  .positions-table { font-size: 13px; }
+  .positions-table thead th { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.1em; background: var(--color-bg-inset); padding: var(--space-2) var(--space-3); }
+  .positions-table td { padding: var(--space-2) var(--space-3); }
+  .positions-table tbody tr:hover { background: var(--color-bg-inset); }
+  .positions-title { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-text-secondary); }
+  .positions-heading { display: flex; align-items: center; gap: var(--space-3); min-width: 0; }
+  .cash-tracker, .cash-display, .cash-editor { display: inline-flex; align-items: center; gap: var(--space-1); }
+  .cash-tracker { gap: 2ch; padding-left: var(--space-3); border-left: 1px solid var(--color-divider); font-family: var(--font-mono); font-size: 13px; font-weight: var(--font-weight-semibold); color: var(--color-text-primary); }
+  .cash-tracker[hidden] { display: none; }
+  .cash-value { font-variant-numeric: tabular-nums; }
+  .cash-edit-btn { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; padding: 0; color: var(--color-text-primary); background: transparent; border: 0; border-radius: var(--radius-sm); cursor: pointer; }
+  .cash-edit-btn:hover, .cash-editor button:hover { background: var(--color-bg-subtle); }
+  .cash-edit-btn svg { width: 14px; height: 14px; }
+  .cash-editor[hidden], .cash-display[hidden] { display: none; }
+  .cash-editor input { width: 100px; height: 28px; padding: 0 var(--space-2); box-sizing: border-box; font: inherit; color: var(--color-text-primary); background: var(--color-bg-inset); border: 1px solid var(--color-border); border-radius: var(--radius-sm); }
+  .cash-editor button { height: 28px; padding: 0 var(--space-2); font: 11px var(--font-mono); color: var(--color-text-primary); background: transparent; border: 1px solid var(--color-border); border-radius: var(--radius-sm); cursor: pointer; }
+  .cash-edit-btn:focus-visible, .cash-editor input:focus-visible, .cash-editor button:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+  .positions-count { font-family: var(--font-mono); font-size: 11px; }
+  .positions-header-actions { display: flex; align-items: center; justify-content: flex-end; gap: var(--space-3); flex-wrap: wrap; }
+  .hide-free-btn { height: 28px; padding: 0 var(--space-2); background: var(--color-bg-elevated); color: var(--color-text-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-sm); font: 10px var(--font-mono); cursor: pointer; white-space: nowrap; }
+  .hide-free-btn:hover { border-color: var(--color-text-primary); color: var(--color-text-primary); }
+  .hide-free-btn[aria-pressed="true"] { background: var(--color-primary); color: var(--color-text-inverse); border-color: var(--color-primary); }
+  .hide-free-btn[aria-pressed="true"]:hover { background: var(--color-primary-hover); border-color: var(--color-primary-hover); color: var(--color-text-inverse); }
+  .hide-free-btn:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+  /* Sidebar: console panels */
+  .donut-panel-title, .sector-panel-title, .pnl-panel-title { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-text-secondary); }
+  .allocation-track { height: 6px; background: var(--color-bg-inset); border: 1px solid var(--color-divider); }
+  .allocation-fill { background: var(--color-text-primary); }
+  .sector-bar { height: 10px; border: 1px solid var(--color-border); }
+  .pnl-chart-container { background: var(--color-bg-inset); }
+  .donut-legend-pct, .sector-legend-value { font-family: var(--font-mono); }
+  /* Chart toolbar + modal inputs: mono details */
+  .position-form-input, .move-select { font-family: var(--font-mono); font-size: 13px; }
+  .position-form-input:focus, .move-select:focus, .portfolio-tabs-dropdown:focus { border-color: var(--color-text-primary); box-shadow: 2px 2px 0 var(--color-text-primary); }
+  /* Direction B density (review round 2): tighter section rhythm,
+     component padding, and table row/text spacing */
+  .summary-cards { margin-bottom: var(--space-4); }
+  .summary-card { padding: 14px 18px; gap: var(--space-1); }
+  .stats-bar { margin-bottom: var(--space-3); padding: 10px 16px; gap: var(--space-5); }
+  .trade-form { margin-bottom: var(--space-3); padding: 12px 16px; padding-bottom: calc(12px + 22px); gap: var(--space-2); }
+  .action-bar { margin-bottom: var(--space-3); }
+  .content-grid { gap: var(--space-4); }
+  .positions-section { margin-bottom: var(--space-4); }
+  .positions-header { padding: 10px 16px; }
+  .positions-table thead th { padding: 6px 12px; }
+  .positions-table td { padding: 6px 12px; line-height: 1.4; }
+  .donut-panel { padding: var(--space-4); }
+  .sector-panel-body { padding: 0 var(--space-4) var(--space-4); }
+  .pnl-panel-body { padding: 0 var(--space-4) var(--space-4); }
+  .modal-body { padding: var(--space-5); }
+  .modal-header { padding: var(--space-4) var(--space-5); }
+  /* ═══════════════════════════════════════════════════════════
+     DIRECTION B — round 4: header-3col, notes-less trade, sticky fix
+     ═══════════════════════════════════════════════════════════ */
+  /* Header: 3 units like the mock; Positions card hidden (its count
+     stays live in the table header; unhide to restore) */
+  .summary-cards { grid-template-columns: repeat(3, 1fr); }
+  .summary-card:last-child { display: none; }
+  /* (trade Notes hidden via .tf-notes in round 5) */
+  /* Sticky name bar: opaque + separated (replaces transparent override) */
+  .portfolio-tabs { background: var(--color-bg); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); box-shadow: var(--shadow-sm); z-index: 200; border-bottom: 1px solid var(--color-border); }
+  /* Direction B responsive: 1+2 grid once it collapses */
+  @media (max-width: 1199px) {
+    .summary-cards { grid-template-columns: repeat(2, 1fr); }
+    .summary-card:first-child { grid-column: 1 / -1; border-right: none; border-bottom: 1px solid var(--color-divider); }
+    .summary-card:nth-child(2) { border-right: 1px solid var(--color-divider); }
+  }
+
+  /* ─── RESPONSIVE ─── */
+  @media (max-width: 1199px) {
+    .content-grid { grid-template-columns: 1fr; }
+    .sector-panel { position: static; }
+    .summary-cards { grid-template-columns: repeat(2, 1fr); }
+    .donut-container { flex-direction: column; }
+  }
+  @media (max-width: 767px) {
+    #content.main-content { padding: var(--space-4); }
+    .positions-header { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: var(--space-2); row-gap: var(--space-1); }
+    .positions-heading { display: contents; }
+    .positions-title { grid-column: 1; grid-row: 1; }
+    .cash-tracker { grid-column: 1 / -1; grid-row: 2; padding-left: 0; border-left: none; }
+    .positions-header-actions { grid-column: 2; grid-row: 1; justify-content: flex-end; gap: var(--space-2); flex-wrap: nowrap; min-width: 0; }
+    .positions-count { min-width: 0; overflow: hidden; text-overflow: ellipsis; font-size: 10px; white-space: nowrap; }
+    .hide-free-btn { flex-shrink: 0; }
+    .summary-cards { grid-template-columns: repeat(2, 1fr); }
+    .summary-card:first-child { grid-column: 1 / -1; border-right: none; border-bottom: 1px solid var(--color-divider); }
+    .summary-card:nth-child(2) { border-right: 1px solid var(--color-divider); }
+    .summary-card { padding: var(--space-3); }
+    .summary-card-value { font-size: var(--font-size-lg); }
+    .summary-card-change { font-size: var(--font-size-xs); }
+    .portfolio-tabs-scroll { display: none; }
+    .portfolio-add-wrapper { display: none; }
+    .portfolio-tabs-dropdown { display: flex; height: 44px; }
+    .positions-table { font-size: var(--font-size-xs); }
+    .positions-table td, .positions-table th { padding: var(--space-2) var(--space-3); }
+    .company-name { display: none; }
+    .allocation-bar .allocation-track { display: none; }
+    /* (trade rows are explicit .tf-row markup now — see round 5) */
+    .ticker-info-line { position: relative; bottom: auto; left: auto; right: auto; margin-top: 2px; z-index: auto; }
+    .donut-container { flex-direction: column; align-items: center; }
+    /* ── 44px touch targets (pilot) — density preserved elsewhere ── */
+    .trade-input, .btn-buy, .btn-sell { min-height: 44px; }
+    /* (mobile BUY/SELL sizing lives in round 5) */
+    .action-pill { min-height: 44px; padding: 8px var(--space-4); }
+    .action-checkbox, .row-checkbox { width: 18px; height: 18px; }
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     DIRECTION B — round 3: exact-match convergence (review)
+     Last in file so it wins over base + responsive rules.
+     Hides are display-only: sorting, selection, editing intact.
+     ═══════════════════════════════════════════════════════════ */
+  /* Summary: no icon chips; Positions card demoted to meta */
+  .summary-card-icon { display: none; }
+  .summary-card:last-child .summary-card-value { font-size: var(--font-size-xl); }
+  /* Holding Value stays visible at all widths; narrow screens can scroll the table. */
+  .company-name { display: none; }
+  .notes-cell { display: none; }
+  .positions-table td.actions-cell { white-space: nowrap; width: 44px; padding: 6px 8px; }
+  .edit-position-btn { opacity: 1; }
+  .positions-table thead th:first-child,
+  .positions-table tbody td:first-child { padding-left: var(--space-2); padding-right: var(--space-2); }
+  /* ── Cycle stats columns (read-only, transaction-derived) ──
+     Terminal Precision: mono tabular figures, existing up/down tokens only.
+     V1 detail = title tooltip; mobile V1 = horizontal scroll (wrapper). */
+  .cycle-value { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; color: var(--color-text-primary); }
+  .be-cell { white-space: nowrap; }
+  .free-badge { display: inline-block; margin-left: 6px; padding: 1px 6px; font-family: var(--font-mono); font-size: 10px; font-weight: var(--font-weight-bold); letter-spacing: 0.08em; color: var(--color-stock-up); border: 1px solid var(--color-stock-up); border-radius: var(--radius-xs); background: var(--color-success-subtle); vertical-align: baseline; white-space: nowrap; }
+  .position-form-help { font-size: var(--font-size-xs); color: var(--color-text-secondary); line-height: var(--line-height-normal); }
+  /* Sidebar below table as one joined console box (all widths) */
+  .content-grid { grid-template-columns: 1fr; }
+  .content-grid > aside { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr); gap: 0; background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-md); overflow: hidden; }
+  .content-grid > aside .pnl-panel,
+  .content-grid > aside .donut-panel,
+  .content-grid > aside .sector-panel { border: none; border-radius: 0; box-shadow: none; background: transparent; margin-bottom: 0 !important; }
+  .content-grid > aside .pnl-panel,
+  .content-grid > aside .donut-panel { border-right: 1px solid var(--color-divider); }
+  .donut-container { gap: var(--space-4); }
+  @media (max-width: 767px) {
+    #content.main-content { padding: 12px; }
+    .content-grid > aside { grid-template-columns: minmax(0, 1fr); }
+    .content-grid > aside > * { min-width: 0; }
+    .donut-container { flex-wrap: wrap; }
+    .donut-legend, .sector-legend, .pnl-panel-body { min-width: 0; }
+    .content-grid > aside .pnl-panel,
+    .content-grid > aside .donut-panel { border-right: none; border-bottom: 1px solid var(--color-divider); }
+    .allocation-bar .allocation-track { display: inline-block; }
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     DIRECTION B — round 5: trade form rewrite (explicit .tf-row markup)
+     ═══════════════════════════════════════════════════════════ */
+  /* Desktop: four equal-width fields and the trade actions share one line. */
+  .trade-form { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)) auto; }
+  .tf-row { display: contents; }
+  .tf-actions { display: flex; align-items: flex-end; gap: var(--space-3); flex-shrink: 0; }
+  /* Notes live in DOM (validators + save handlers read them) but never shown */
+  .tf-notes, .modal-notes-group { display: none; }
+  /* Ticker row: input yields to the validation badge instead of overflowing it */
+  .trade-ticker-row .trade-input { flex: 1 1 auto; min-width: 0; }
+  .ticker-validation { flex-shrink: 0; }
+  @media (max-width: 767px) {
+    .trade-form { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; }
+    .tf-actions { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .tf-actions .btn-buy, .tf-actions .btn-sell { width: 100%; height: 44px; font-size: 13px; }
+    .trade-form .trade-input { height: 44px; min-height: 44px; font-size: 12px; }
+    .trade-date { padding-inline: var(--space-1); }
+    .trade-date::-webkit-datetime-edit { font: inherit; padding: 0; }
+    .trade-date::-webkit-calendar-picker-indicator { margin: 0; padding: 0; width: 14px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+  }
+  @media (max-width: 767px) {
+    /* Trailing Stop is desktop-only: mobile keeps the original 5-button
+       toolbar and S/R-only legend; the chart line itself still renders. */
+    /* Reorder modal as bottom sheet on mobile: thumb-friendly, clears the ticker strip */
+    #reorder-modal { align-items: flex-end; padding: 0; }
+    #reorder-modal .modal-card { width: 100%; max-width: 100%; max-height: 88dvh; border-radius: var(--radius-lg) var(--radius-lg) 0 0; }
+    #reorder-modal .modal-body { overflow-y: auto; }
+    #reorder-modal .reorder-list { max-height: 52dvh; }
+    #reorder-modal .reorder-actions .btn-ghost,
+    #reorder-modal .reorder-actions .btn-primary { min-height: 44px; }
+  }
+  /* Collapse the market ticker while any input is focused (mobile keyboard) */
+  body:has(input:focus) { --market-ticker-height: 0px; }
+  body:has(input:focus) #content.main-content { margin-top: var(--nav-height); }
+  body:has(input:focus) .portfolio-tabs { top: var(--nav-height); }
+  body:has(input:focus) #portfolio-market-ticker { display: none; }
+</style>
+
+<!-- MARKET TICKER (TradingView, configured independently in Settings) -->
+<div class="ticker-strip" id="portfolio-market-ticker" role="region" aria-label="Market ticker" hidden>
+  <div class="market-ticker-widget"></div>
+  <span class="sr-only market-ticker-status" role="status"></span>
+</div>
+
+<!-- MAIN CONTENT -->
+<main class="main-content" id="panel-portfolio" role="tabpanel">
+
+  <!-- Error Banner -->
+  <div class="error-banner" id="error-banner" role="alert">
+    <svg class="error-banner-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="8" stroke="currentColor" stroke-width="1.5"/><path d="M10 6v5M10 13.5v.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    <div class="error-banner-content"><div class="error-banner-title">Unable to load portfolio data</div><div class="error-banner-message">Check your connection and try again</div></div>
+    <button class="btn-retry" id="retry-btn" aria-label="Retry loading portfolio">Retry</button>
+  </div>
+
+  <!-- CAD Rate Warning Banner -->
+  <div class="cad-rate-warning" id="cad-rate-warning" role="alert">
+    <svg class="cad-rate-warning-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="8" stroke="currentColor" stroke-width="1.5"/><path d="M10 6v5M10 13.5v.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    <div class="cad-rate-warning-content"><div class="cad-rate-warning-title">CAD/USD rate unavailable</div><div class="cad-rate-warning-message">Currency conversions are using raw values. The rate will be retried on next refresh.</div></div>
+  </div>
+
+  <!-- Skeleton loading state -->
+  <div class="skeleton" id="skeleton-view" aria-label="Loading portfolio">
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:var(--space-4);margin-bottom:var(--space-6)">
+      <div class="skeleton-card"><div class="skeleton-label skeleton-pulse"></div><div class="skeleton-value skeleton-pulse"></div><div class="skeleton-change skeleton-pulse"></div></div>
+      <div class="skeleton-card"><div class="skeleton-label skeleton-pulse"></div><div class="skeleton-value skeleton-pulse"></div><div class="skeleton-change skeleton-pulse"></div></div>
+      <div class="skeleton-card"><div class="skeleton-label skeleton-pulse"></div><div class="skeleton-value skeleton-pulse"></div><div class="skeleton-change skeleton-pulse"></div></div>
+      <div class="skeleton-card"><div class="skeleton-label skeleton-pulse"></div><div class="skeleton-value skeleton-pulse"></div><div class="skeleton-change skeleton-pulse"></div></div>
+    </div>
+    <div style="background:var(--color-bg-elevated);border:1px solid var(--color-border);border-radius:var(--radius-md);overflow:hidden">
+      <div style="padding:var(--space-4) var(--space-5);border-bottom:1px solid var(--color-divider)"><div class="skeleton-pulse" style="width:120px;height:18px"></div></div>
+      <div class="skeleton-table-row"><div class="skeleton-cell skeleton-pulse" style="width:12%"></div><div class="skeleton-cell skeleton-pulse" style="width:18%"></div><div class="skeleton-cell skeleton-pulse" style="width:8%"></div><div class="skeleton-cell skeleton-pulse" style="width:10%"></div><div class="skeleton-cell skeleton-pulse" style="width:10%"></div><div class="skeleton-cell skeleton-pulse" style="width:12%"></div><div class="skeleton-cell skeleton-pulse" style="width:10%"></div></div>
+      <div class="skeleton-table-row"><div class="skeleton-cell skeleton-pulse" style="width:12%"></div><div class="skeleton-cell skeleton-pulse" style="width:18%"></div><div class="skeleton-cell skeleton-pulse" style="width:8%"></div><div class="skeleton-cell skeleton-pulse" style="width:10%"></div><div class="skeleton-cell skeleton-pulse" style="width:10%"></div><div class="skeleton-cell skeleton-pulse" style="width:12%"></div><div class="skeleton-cell skeleton-pulse" style="width:10%"></div></div>
+      <div class="skeleton-table-row"><div class="skeleton-cell skeleton-pulse" style="width:12%"></div><div class="skeleton-cell skeleton-pulse" style="width:18%"></div><div class="skeleton-cell skeleton-pulse" style="width:8%"></div><div class="skeleton-cell skeleton-pulse" style="width:10%"></div><div class="skeleton-cell skeleton-pulse" style="width:10%"></div><div class="skeleton-cell skeleton-pulse" style="width:12%"></div><div class="skeleton-cell skeleton-pulse" style="width:10%"></div></div>
+    </div>
+  </div>
+
+  <!-- Empty state: replaced by inline empty state inside positions-section (Issue 1) -->
+
+  <!-- MAIN VIEW -->
+  <div id="main-view">
+
+    <!-- 1. SUMMARY CARDS -->
+    <div class="summary-cards" role="region" aria-label="Portfolio summary">
+      <div class="summary-card">
+        <div class="summary-card-header"><div class="summary-card-icon"><svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 1v14M4 4h6a2 2 0 010 4H5M4 8h7a2 2 0 010 4H5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div><span class="summary-card-label">TOTAL · CAD</span></div>
+        <div class="summary-card-value" id="summary-total-value">$0.00</div>
+        <div class="summary-card-change" style="color:var(--color-text-secondary)" id="summary-total-change"><span>Across all portfolios</span></div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-card-header"><div class="summary-card-icon"><svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2 12l4-4 3 2 5-7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M11 3h3v3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div><span class="summary-card-label">UNREAL P/L</span></div>
+        <div class="summary-card-value" id="summary-pnl-value" style="color:var(--color-stock-up)">+$0.00</div>
+        <div class="summary-card-change up" id="summary-pnl-change"><svg viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M6 9V3M3 5l3-3 3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span>+0.00%</span></div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-card-header"><div class="summary-card-icon"><svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M8 4v4l3 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div><span class="summary-card-label">DAY</span></div>
+        <div class="summary-card-value" id="summary-day-value" style="color:var(--color-stock-up)">+$0.00</div>
+        <div class="summary-card-change up" id="summary-day-change"><svg viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M6 9V3M3 5l3-3 3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span>+0.00%</span></div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-card-header"><div class="summary-card-icon"><svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M5 8h6M5 5h6M5 11h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div><span class="summary-card-label">Positions</span></div>
+        <div class="summary-card-value" id="summary-positions-count">0</div>
+        <div class="summary-card-change" style="color:var(--color-text-secondary)" id="summary-positions-label">active across all portfolios</div>
+      </div>
+    </div>
+
+    <!-- 2. PORTFOLIO TABS -->
+    <div class="portfolio-tabs" role="tablist" aria-label="Portfolio selection">
+      <div class="portfolio-tabs-dropdown" id="portfolio-tabs-dropdown" role="combobox" aria-expanded="false" aria-haspopup="listbox" tabindex="0" aria-label="Select portfolio">
+        <span class="dropdown-label" id="dropdown-label">Select portfolio</span>
+        <svg class="chevron" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M3 5l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div class="portfolio-dropdown-menu" id="portfolio-dropdown-menu" role="listbox" aria-label="Portfolios">
+        <!-- Options rendered by JS -->
+      </div>
+      <div class="portfolio-tabs-scroll" id="portfolio-tabs-scroll">
+        <!-- Tabs rendered by JS -->
+      </div>
+      <div class="portfolio-add-wrapper">
+        <button class="portfolio-add-btn" id="add-portfolio-btn" aria-label="Create new portfolio" aria-haspopup="true" aria-expanded="false">
+          <svg viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M7 2v10M2 7h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          New Portfolio
+        </button>
+        <button class="portfolio-reorder-btn" id="reorder-portfolios-btn" aria-label="Manage portfolio order" title="Manage portfolio order">
+          <svg viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M2 4h10M2 7h10M2 10h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M10 3l2 1-2 1M10 9l2 1-2 1" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Manage order
+        </button>
+        <div class="new-portfolio-dropdown" id="new-portfolio-dropdown" role="menu">
+          <h4>Create New Portfolio</h4>
+          <button class="currency-option" role="menuitem" data-currency="USD"><span class="flag" aria-hidden="true">&#x1F1FA;&#x1F1F8;</span><span class="currency-option-info"><span class="label">USD Portfolio</span><span class="desc">United States Dollar</span></span></button>
+          <button class="currency-option" role="menuitem" data-currency="CAD"><span class="flag" aria-hidden="true">&#x1F1E8;&#x1F1E6;</span><span class="currency-option-info"><span class="label">CAD Portfolio</span><span class="desc">Canadian Dollar</span></span></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. STATS BAR -->
+    <div class="stats-bar" role="region" aria-label="Portfolio statistics" id="stats-bar">
+      <div class="stats-bar-item"><span class="stats-bar-label">Cost Basis</span><span class="stats-bar-value" id="stat-cost-basis">$0.00</span><span class="stats-bar-alt" id="stat-cost-basis-alt"></span></div>
+      <div class="stats-bar-divider" aria-hidden="true"></div>
+      <div class="stats-bar-item"><span class="stats-bar-label">Market Value</span><span class="stats-bar-value" id="stat-market-value">$0.00</span><span class="stats-bar-alt" id="stat-market-value-alt"></span></div>
+      <div class="stats-bar-divider" aria-hidden="true"></div>
+      <div class="stats-bar-item"><span class="stats-bar-label">Unrealized P/L</span><span class="stats-bar-value up" id="stat-unrealized-pnl">+$0.00 (+0.00%)</span><span class="stats-bar-alt" id="stat-unrealized-pnl-alt"></span></div>
+      <div class="stats-bar-divider" aria-hidden="true"></div>
+      <div class="stats-bar-item"><span class="stats-bar-label">Day Change</span><span class="stats-bar-value up" id="stat-day-change">+$0.00 (+0.00%)</span><span class="stats-bar-alt" id="stat-day-change-alt"></span></div>
+
+      <button class="btn-delete-portfolio" id="delete-portfolio-btn" aria-label="Delete current portfolio">
+        <svg viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M3 4h8M5 4V3a1 1 0 011-1h2a1 1 0 011 1v1M4 4v7a1 1 0 001 1h4a1 1 0 001-1V4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+        Delete Portfolio
+      </button>
+    </div>
+
+    <!-- Price warning banner (hidden by default) -->
+    <div class="price-warning-banner" id="price-warning-banner" style="display:none">
+      <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 1v10M8 13v1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      <span id="price-warning-text">Some prices unavailable. Allocation and P/L may be incomplete.</span>
+    </div>
+
+    <!-- 4. TRADE FORM (ADD POSITION) -->
+    <form class="trade-form" id="trade-form" onsubmit="return false" aria-label="Add position">
+      <div class="tf-row tf-row-main">
+        <div class="trade-form-group">
+          <label class="trade-form-label" for="trade-ticker">TICK</label>
+          <div class="trade-ticker-row">
+            <input type="text" id="trade-ticker" class="trade-input ticker-input" placeholder="e.g. NVDA" autocomplete="off" spellcheck="false" maxlength="10" aria-describedby="trade-ticker-validation trade-ticker-info">
+            <div class="ticker-validation" id="trade-ticker-validation" role="status" aria-live="polite"></div>
+          </div>
+          <div class="ticker-info-line" id="trade-ticker-info"></div>
+        </div>
+        <div class="trade-form-group">
+          <label class="trade-form-label" for="trade-qty">QTY</label>
+          <input type="number" id="trade-qty" class="trade-input" placeholder="0" min="0.0001" step="any">
+        </div>
+      </div>
+      <div class="tf-row tf-row-px">
+        <div class="trade-form-group">
+          <label class="trade-form-label" for="trade-price">Price</label>
+          <div class="trade-input-wrap">
+            <span class="trade-input-prefix">$</span>
+            <input type="number" id="trade-price" class="trade-input has-prefix" placeholder="0.00" step="0.01">
+          </div>
+        </div>
+        <div class="trade-form-group">
+          <label class="trade-form-label" for="trade-date">Date</label>
+          <input type="date" id="trade-date" class="trade-input trade-date" min="1900-01-01" max="2100-12-31" required>
+        </div>
+        <div class="tf-actions">
+          <button type="submit" class="btn-buy" id="trade-buy-btn" aria-label="Buy position">BUY</button>
+          <button type="button" class="btn-sell" id="trade-sell-btn" aria-label="Sell position">SELL</button>
+        </div>
+      </div>
+      <div class="trade-form-group tf-notes">
+        <label class="trade-form-label" for="trade-notes">Notes</label>
+        <input type="text" id="trade-notes" class="trade-input" placeholder="Optional">
+      </div>
+    </form>
+
+    <!-- 5. ACTION BAR (FLOATING PILLS) -->
+    <div class="action-bar" role="toolbar" aria-label="Position actions">
+      <input type="checkbox" class="action-checkbox" id="select-all" aria-label="Select all positions">
+      <button class="action-pill primary" id="move-btn" disabled aria-label="Move selected positions">
+        <svg viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M2 7h10M8 3l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Move <span class="pill-count" id="selected-count">0</span>
+      </button>
+      <button class="action-pill destructive" id="delete-positions-btn" disabled aria-label="Delete selected positions">
+        <svg viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M3 4h8M5 4V3a1 1 0 011-1h2a1 1 0 011 1v1M4 4v7a1 1 0 001 1h4a1 1 0 001-1V4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+        Delete <span class="pill-count" id="delete-count">0</span>
+      </button>
+      <button class="action-pill" id="refresh-btn" aria-label="Refresh positions">
+        <svg viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M12 7a5 5 0 11-1.8-3.8M12 2v3h-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Refresh
+      </button>
+    </div>
+
+    <!-- 6. CONTENT GRID: Positions Table + Sidebar -->
+    <div class="content-grid">
+      <section class="positions-section" aria-label="Holdings">
+        <div class="positions-header">
+          <div class="positions-heading">
+            <h2 class="positions-title">Holdings</h2>
+            <div class="cash-tracker">
+              <span>CASH:</span>
+              <span class="cash-display" id="cash-display">
+                <span class="cash-value" id="cash-value">$0.00</span>
+                <button type="button" class="cash-edit-btn" id="cash-edit-btn" aria-label="Edit cash balance" title="Edit cash balance">
+                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M11.5 1.5l3 3L5 14H2v-3L11.5 1.5z"/></svg>
+                </button>
+              </span>
+              <form class="cash-editor" id="cash-editor" hidden>
+                <input type="number" id="cash-input" min="0" step="0.01" inputmode="decimal" aria-label="Cash balance" required>
+                <button type="submit">Save</button>
+                <button type="button" id="cash-cancel-btn">Cancel</button>
+              </form>
+            </div>
+          </div>
+          <div class="positions-header-actions">
+            <span class="positions-count" id="positions-count">0 positions</span>
+            <button type="button" class="hide-free-btn" id="hide-free-btn" aria-pressed="true">Hide FREE</button>
+          </div>
+        </div>
+        <!-- Inline empty state (shown when no portfolio selected) -->
+        <div class="positions-inline-empty" id="positions-inline-empty" style="display:none;">
+          <div class="inline-empty-icon">
+            <svg viewBox="0 0 48 48" fill="none"><rect x="6" y="10" width="36" height="28" rx="4" stroke="currentColor" stroke-width="2"/><path d="M6 18h36" stroke="currentColor" stroke-width="2"/><path d="M20 28h8M24 24v8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </div>
+          <h3 class="inline-empty-title">No portfolio exists</h3>
+          <p class="inline-empty-desc">Create one to start tracking your investments</p>
+          <button class="btn-primary" id="inline-create-btn">
+            <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            Create Portfolio
+          </button>
+        </div>
+        <div class="positions-table-wrapper">
+          <table class="positions-table" aria-label="Portfolio positions">
+            <thead>
+              <tr>
+                <th style="width:32px"><span class="sr-only">Select</span></th>
+                <th scope="col" class="sortable" data-sort="ticker">Stock</th>
+                <th scope="col" class="text-right sortable" data-sort="qty">Qty</th>
+                <th scope="col" class="text-right sortable" data-sort="avg">Avg Price</th>
+                <th scope="col" class="text-right sortable" data-sort="current">Current</th>
+                <th scope="col" class="text-right sortable" data-sort="pnl">Unrealized P/L</th>
+                <th scope="col" class="text-right sortable" data-sort="mv" tabindex="0" title="Estimated value of shares held: quantity × current share price">Holding Value</th>
+                <th scope="col" class="text-right sortable" data-sort="unrecovered" tabindex="0">Unrecovered Capital</th>
+                <th scope="col" class="text-right sortable" data-sort="realized" tabindex="0">Realized P/L</th>
+                <th scope="col" class="text-right sortable" data-sort="breakeven" tabindex="0">Breakeven Price</th>
+                <th scope="col">Allocation</th>
+                <th scope="col">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="positions-tbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <aside aria-label="Portfolio sidebar">
+      <!-- P/L History Panel -->
+      <div class="pnl-panel" style="margin-bottom:var(--space-4)" aria-label="P/L History">
+        <div class="pnl-panel-header">
+          <span class="pnl-panel-title">P/L History</span>
+        </div>
+        <div class="pnl-panel-body" id="pnl-panel-body">
+          <!-- Chart state (default) -->
+          <div id="pnl-chart-state">
+            <div class="pnl-chart-container" id="pnl-chart-container">
+              <div class="pnl-tooltip" id="pnl-tooltip" role="tooltip" style="display:none;">
+                <div class="pnl-tooltip-date" id="pnl-tooltip-date"></div>
+                <div class="pnl-tooltip-value" id="pnl-tooltip-value"></div>
+              </div>
+            </div>
+            <div class="pnl-summary" id="pnl-summary">
+              <span class="pnl-summary-value" id="pnl-summary-value">--</span>
+              <span class="pnl-summary-pct" id="pnl-summary-pct">--</span>
+              <span class="pnl-summary-label">Unrealized</span>
+            </div>
+          </div>
+          <!-- Empty state -->
+          <div class="pnl-empty" id="pnl-empty-state" style="display:none;">
+            <div class="pnl-empty-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M3 3v18h18"/>
+                <path d="M7 16l4-5 4 3 5-7"/>
+              </svg>
+            </div>
+            <p class="pnl-empty-text">P/L history will appear after a few days of tracking</p>
+          </div>
+          <!-- Loading state -->
+          <div class="pnl-loading" id="pnl-loading-state" style="display:none;">
+            <div class="pnl-skeleton-chart"></div>
+            <div class="pnl-skeleton-row">
+              <div class="pnl-skeleton-value"></div>
+              <div class="pnl-skeleton-pct"></div>
+            </div>
+          </div>
+          <!-- Error state -->
+          <div class="pnl-error" id="pnl-error-state" style="display:none;">
+            <div class="pnl-error-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M12 8v4M12 16h.01"/>
+              </svg>
+            </div>
+            <p class="pnl-error-text">Unable to load P/L history</p>
+            <button class="pnl-retry-btn" id="pnl-retry-btn">Retry</button>
+          </div>
+        </div>
+      </div>
+        <!-- Donut Allocation Chart -->
+        <div class="donut-panel" style="margin-bottom:var(--space-4)">
+          <div class="donut-panel-header"><h3 class="donut-panel-title">Allocation</h3></div>
+          <div class="donut-container">
+            <svg class="donut-svg" width="140" height="140" viewBox="0 0 140 140" id="donut-chart" aria-label="Portfolio allocation donut chart"></svg>
+            <div class="donut-legend" id="donut-legend"></div>
+          </div>
+        </div>
+        <!-- Sector Panel -->
+        <div class="sector-panel" style="margin-bottom:var(--space-4)" aria-label="Sector allocation">
+          <div class="sector-panel-header" aria-expanded="true" id="sector-toggle" tabindex="0" role="button" aria-label="Toggle sector allocation">
+            <span class="sector-panel-title">Sector Allocation</span>
+            <span class="sector-panel-chevron" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          </div>
+          <div class="sector-panel-body" id="sector-body">
+            <div class="sector-bar" id="sector-bar"></div>
+            <div class="sector-legend" id="sector-legend"></div>
+          </div>
+      </div>
+    </aside>
+  </div>
+
+  </div><!-- /main-view -->
+
+</main>
+
+<!-- ADD/EDIT POSITION MODAL -->
+<div class="modal-backdrop position-modal" id="position-modal" role="dialog" aria-modal="true" aria-label="Add position">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h2 class="modal-title" id="position-modal-title">Add Position</h2>
+      <button class="modal-close" id="position-modal-close" aria-label="Close"><svg viewBox="0 0 18 18" fill="none"><path d="M4 4l10 10M14 4L4 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <form class="position-form" id="position-form" onsubmit="return false">
+        <div class="position-form-group">
+          <label class="position-form-label" for="modal-ticker">Ticker</label>
+          <input type="text" id="modal-ticker" class="position-form-input" placeholder="e.g. AAPL" autocomplete="off" required>
+          <span class="position-form-error" id="modal-ticker-error">Please enter a valid ticker symbol</span>
+        </div>
+        <div class="position-form-group">
+          <label class="position-form-label" for="modal-qty">Quantity</label>
+          <input type="number" id="modal-qty" class="position-form-input" placeholder="0" min="1" step="any" required>
+          <span class="position-form-error" id="modal-qty-error">Quantity must be at least 1</span>
+        </div>
+        <div class="position-form-group">
+          <label class="position-form-label" for="modal-price">Average Price</label>
+          <input type="number" id="modal-price" class="position-form-input" placeholder="0.00" step="0.01" min="0.01" required>
+          <span class="position-form-error" id="modal-price-error">Price must be greater than 0</span>
+        </div>
+        <div class="position-form-group modal-notes-group">
+          <label class="position-form-label" for="modal-notes">Notes</label>
+          <input type="text" id="modal-notes" class="position-form-input" placeholder="Optional notes">
+        </div>
+        <p class="position-form-help">Direct qty/avg edits don't write a transaction — cycle stats stay transaction-derived.</p>
+        <div class="position-form-actions">
+          <button type="button" class="btn-ghost" id="position-modal-cancel">Cancel</button>
+          <button type="submit" class="btn-primary" id="position-modal-save">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- MOVE POSITIONS MODAL -->
+<div class="modal-backdrop move-modal" id="move-modal" role="dialog" aria-modal="true" aria-label="Move positions">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h2 class="modal-title">Move Positions</h2>
+      <button class="modal-close" id="move-modal-close" aria-label="Close"><svg viewBox="0 0 18 18" fill="none"><path d="M4 4l10 10M14 4L4 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:var(--font-size-sm);color:var(--color-text-secondary);margin-bottom:var(--space-3)">Moving the following positions:</p>
+      <div class="move-positions-list" id="move-positions-list"></div>
+      <label class="trade-form-label" for="move-dest" style="display:block;margin-bottom:var(--space-2)">Destination Portfolio</label>
+      <select class="move-select" id="move-dest"></select>
+      <div class="move-warning" id="move-warning" style="display:none">
+        <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 1l7 14H1L8 1z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M8 7v3M8 12v.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <span id="move-warning-text">Warning: Moving positions between portfolios may affect currency calculations.</span>
+      </div>
+      <div class="move-actions">
+        <button class="btn-ghost" id="move-cancel">Cancel</button>
+        <button class="btn-primary" id="move-confirm">Move</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- REORDER PORTFOLIOS MODAL -->
+<div class="modal-backdrop reorder-modal" id="reorder-modal" role="dialog" aria-modal="true" aria-label="Manage portfolio order">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h2 class="modal-title">Manage portfolio order</h2>
+      <button class="modal-close" id="reorder-modal-close" aria-label="Close"><svg viewBox="0 0 18 18" fill="none"><path d="M4 4l10 10M14 4L4 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <p class="reorder-help">Drag or use ↑ ↓ to arrange. This order is shared with the Transactions screen (tabs and mobile dropdown). Saving only changes display order — holdings and transactions are untouched.</p>
+      <div class="reorder-list" id="reorder-list"></div>
+      <div class="reorder-actions">
+        <button class="btn-ghost" id="reorder-cancel">Cancel</button>
+        <button class="btn-primary" id="reorder-save">Save order</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- DELETE PORTFOLIO CONFIRMATION MODAL -->
+<div class="modal-backdrop delete-modal" id="delete-modal" role="dialog" aria-modal="true" aria-label="Delete portfolio">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h2 class="modal-title">Delete Portfolio</h2>
+      <button class="modal-close" id="delete-modal-close" aria-label="Close"><svg viewBox="0 0 18 18" fill="none"><path d="M4 4l10 10M14 4L4 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <div class="delete-modal-body">
+        <p class="delete-modal-warning">Are you sure you want to delete <strong id="delete-portfolio-name">this portfolio</strong>? This action cannot be undone. All positions in this portfolio will be permanently removed.</p>
+        <div class="delete-modal-actions">
+          <button class="btn-ghost" id="delete-cancel">Cancel</button>
+          <button class="btn-danger" id="delete-confirm">Delete Portfolio</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

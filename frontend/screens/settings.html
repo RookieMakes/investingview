@@ -1,0 +1,287 @@
+<!-- ═══════════════════════════════════════════════════════════
+     Settings Screen — App Configuration & Preferences
+     Loaded by App.loadScreen('settings') into #content
+     ═══════════════════════════════════════════════════════════ -->
+
+<style>
+  /* Screen layout — parent #content.main-content already provides
+     margin-top and padding, so .screen must not duplicate them
+     (same pattern as portfolio.html's #panel-portfolio). */
+  .screen { padding: 0; max-width: 1400px; margin: 0 auto; margin-top: 0; }
+  .screen-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-6); }
+  .screen-title { font-size: var(--font-size-xl); font-weight: var(--font-weight-semibold); }
+  .screen-actions { display: flex; gap: var(--space-3); }
+
+  /* Loading & error states */
+  .error-state .error-message { color: var(--color-error); font-size: var(--font-size-base); }
+  .hidden { display: none !important; }
+
+  /* Settings-specific */
+  .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-6); }
+  .settings-section { background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-md); overflow: hidden; }
+  .settings-section-header { padding: var(--space-4) var(--space-5); border-bottom: 1px solid var(--color-divider); }
+  .settings-section-title { font-size: var(--font-size-md); font-weight: var(--font-weight-semibold); }
+  .settings-section-description { font-size: var(--font-size-sm); color: var(--color-text-secondary); margin-top: var(--space-1); }
+  .settings-section-body { padding: var(--space-5); }
+  .settings-field { margin-bottom: var(--space-5); }
+  .settings-field:last-child { margin-bottom: 0; }
+  .settings-label { display: block; font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); color: var(--color-text-primary); margin-bottom: var(--space-2); }
+  .settings-help { font-size: var(--font-size-xs); color: var(--color-text-tertiary); margin-top: var(--space-1); }
+  .settings-input { width: 100%; height: 40px; padding: 0 var(--space-3); background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius-sm); font-size: var(--font-size-sm); color: var(--color-text-primary); transition: border-color var(--duration-normal) var(--ease-out); }
+  .settings-input:focus { border-color: var(--color-primary); outline: none; }
+  .settings-input::placeholder { color: var(--color-text-tertiary); }
+  .settings-textarea { width: 100%; min-height: 80px; padding: var(--space-3); background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius-sm); font-size: var(--font-size-sm); color: var(--color-text-primary); resize: vertical; font-family: inherit; transition: border-color var(--duration-normal) var(--ease-out); }
+  .settings-textarea:focus { border-color: var(--color-primary); outline: none; }
+  .settings-toggle-row { display: flex; align-items: center; justify-content: space-between; padding: var(--space-3) 0; border-bottom: 1px solid var(--color-divider); }
+  .settings-toggle-row:last-child { border-bottom: none; }
+  .settings-toggle-info { flex: 1; }
+  .settings-toggle-label { font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); color: var(--color-text-primary); }
+  .settings-toggle-description { font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-top: 2px; }
+  .settings-toggle { position: relative; width: 44px; height: 24px; flex-shrink: 0; }
+  .settings-toggle input { opacity: 0; width: 0; height: 0; }
+  .settings-toggle-slider { position: absolute; cursor: pointer; inset: 0; background: var(--color-bg-subtle); border-radius: var(--radius-full); border: 1px solid var(--color-border); transition: background var(--duration-normal); }
+  .settings-toggle-slider::before { content: ''; position: absolute; width: 18px; height: 18px; left: 2px; top: 2px; background: white; border-radius: var(--radius-full); transition: transform var(--duration-normal) var(--ease-out); box-shadow: var(--shadow-sm); }
+  .settings-toggle input:checked + .settings-toggle-slider { background: var(--color-primary); border-color: var(--color-primary); }
+  .settings-toggle input:checked + .settings-toggle-slider::before { transform: translateX(20px); }
+  .settings-toggle input:focus-visible + .settings-toggle-slider { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+  .settings-select { width: 100%; height: 40px; padding: 0 var(--space-3); background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius-sm); font-size: var(--font-size-sm); color: var(--color-text-primary); appearance: auto; transition: border-color var(--duration-normal) var(--ease-out); }
+  .settings-select:focus { border-color: var(--color-primary); outline: none; }
+  .settings-status { display: inline-flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); font-size: var(--font-size-xs); font-weight: var(--font-weight-medium); }
+  .settings-status.connected { background: var(--color-success-subtle); color: var(--color-success); }
+  .settings-status.disconnected { background: var(--color-error-subtle); color: var(--color-error); }
+
+  /* Test Discord & Save Webhook buttons */
+  .settings-test-row { display: flex; align-items: center; gap: var(--space-3); margin-top: var(--space-4); }
+  .settings-test-status { font-size: var(--font-size-xs); font-weight: var(--font-weight-medium); }
+  .settings-test-status.success { color: var(--color-success); }
+  .settings-test-status.error { color: var(--color-error); }
+  .settings-save-webhook-btn { display: inline-flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-4); background: var(--color-primary); color: var(--color-text-inverse, #fff); font-size: var(--font-size-xs); font-weight: var(--font-weight-semibold); border: none; border-radius: var(--radius-sm); cursor: pointer; transition: opacity var(--duration-fast); }
+  .settings-save-webhook-btn:hover { opacity: 0.9; }
+  .settings-save-webhook-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  @media (max-width: 1024px) {
+    .settings-grid { grid-template-columns: 1fr; }
+  }
+
+  /* Tokens live in css/styles.css (:root, global Terminal Precision) —
+     no per-screen pinning. */
+  /* Console components: mono micro-labels, inset inputs, hard-shadow focus */
+  .screen-title { font-weight: var(--font-weight-bold); letter-spacing: -0.01em; }
+  .settings-section-title { font-family: var(--font-mono); font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-text-secondary); }
+  .settings-section-body { padding: var(--space-4) var(--space-5); }
+  .settings-field { margin-bottom: var(--space-4); }
+  .settings-label { font-family: var(--font-mono); font-size: 10px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-text-secondary); }
+  .settings-input, .settings-textarea, .settings-select { background: var(--color-bg-inset); font-size: 13px; transition: border-color var(--duration-normal) var(--ease-out), box-shadow var(--duration-normal) var(--ease-out); }
+  .settings-input { font-family: var(--font-mono); }
+  .settings-input:focus, .settings-textarea:focus, .settings-select:focus { border-color: var(--color-text-primary); outline: none; box-shadow: 2px 2px 0 var(--color-text-primary); }
+  .settings-status { font-family: var(--font-mono); font-size: 11px; }
+  .settings-test-status { font-family: var(--font-mono); }
+  .settings-save-webhook-btn { font-family: var(--font-mono); font-size: 12px; border-radius: var(--radius-sm); }
+  .settings-save-webhook-btn:active { transform: translate(1px, 1px); }
+  @media (max-width: 767px) {
+    .settings-input, .settings-select { min-height: 44px; }
+    .settings-save-webhook-btn { min-height: 44px; }
+  }
+</style>
+
+<div class="screen" id="settings-screen">
+  <header class="screen-header">
+    <h1 class="screen-title">Settings</h1>
+    <div class="screen-actions"></div>
+  </header>
+
+  <main class="screen-content">
+    <!-- Loading State -->
+    <div class="loading-state" id="settings-loading">
+      <div class="spinner"></div>
+      <p>Loading settings...</p>
+    </div>
+
+    <!-- Error State -->
+    <div class="error-state hidden" id="settings-error">
+      <svg width="48" height="48" viewBox="0 0 48 48" fill="none" aria-hidden="true" style="color: var(--color-error)">
+        <circle cx="24" cy="24" r="22" stroke="currentColor" stroke-width="2"/>
+        <path d="M24 14v12M24 30v2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+      <p class="error-message">Unable to load settings. Please try again.</p>
+      <button class="btn-primary">Retry</button>
+    </div>
+
+    <!-- Content Body -->
+    <div class="content-body hidden" id="settings-body">
+      <div class="settings-grid">
+        <!-- Discord Webhook -->
+        <div class="settings-section">
+          <div class="settings-section-header">
+            <div class="settings-section-title">Discord Notifications</div>
+            <div class="settings-section-description">Send alerts to your Discord channel</div>
+          </div>
+          <div class="settings-section-body">
+            <div class="settings-field">
+              <label class="settings-label" for="discord-webhook">Webhook URL</label>
+              <div style="display: flex; gap: var(--space-2); align-items: center;">
+                <input type="url" class="settings-input" id="discord-webhook" placeholder="https://discord.com/api/webhooks/..." value="" style="flex: 1;">
+                <button class="settings-save-webhook-btn" id="settings-save-webhook-btn">Save</button>
+              </div>
+              <div class="settings-help">Create a webhook in your Discord server settings</div>
+            </div>
+            <div class="settings-toggle-row">
+              <div class="settings-toggle-info">
+                <div class="settings-toggle-label">Enable Discord Alerts</div>
+                <div class="settings-toggle-description">Send price alerts to Discord</div>
+              </div>
+              <label class="settings-toggle" aria-label="Toggle Discord alerts">
+                <input type="checkbox" id="discord-alerts-enabled" aria-label="Enable Discord Alerts" checked>
+                <span class="settings-toggle-slider"></span>
+              </label>
+            </div>
+            <div class="settings-toggle-row">
+              <div class="settings-toggle-info">
+                <div class="settings-toggle-label">Daily Summary</div>
+                <div class="settings-toggle-description">Post portfolio summary at market close</div>
+              </div>
+              <label class="settings-toggle" aria-label="Toggle daily summary">
+                <input type="checkbox" id="discord-daily-summary" aria-label="Daily Summary">
+                <span class="settings-toggle-slider"></span>
+              </label>
+            </div>
+            <div class="settings-test-row">
+              <button class="btn-ghost" id="settings-test-discord-btn" style="display: inline-flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-4); background: transparent; color: var(--color-text-secondary); font-size: var(--font-size-xs); font-weight: var(--font-weight-semibold); border-radius: var(--radius-sm); border: 1px solid var(--color-border); transition: all var(--duration-fast);">Test Discord</button>
+              <span class="settings-test-status hidden" id="settings-discord-status"></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Email Config -->
+        <div class="settings-section">
+          <div class="settings-section-header">
+            <div class="settings-section-title">Email Notifications</div>
+            <div class="settings-section-description">Receive alerts via Gmail</div>
+          </div>
+          <div class="settings-section-body">
+            <div class="settings-field">
+              <label class="settings-label" for="email-sender">Sender Email (Gmail)</label>
+              <input type="email" class="settings-input" id="email-sender" placeholder="your-gmail@gmail.com" value="">
+              <div class="settings-help">The Gmail address that sends alerts (e.g. yourname@gmail.com)</div>
+            </div>
+            <div class="settings-field">
+              <label class="settings-label" for="email-app-password">App Password</label>
+              <input type="password" class="settings-input" id="email-app-password" placeholder="Gmail app password" value="">
+              <div class="settings-help">Generate one at myaccount.google.com → Security → App passwords</div>
+            </div>
+            <div class="settings-field">
+              <label class="settings-label" for="email-address">Recipient Email</label>
+              <input type="email" class="settings-input" id="email-address" placeholder="recipient@email.com" value="">
+              <div class="settings-help">Where alerts are delivered (can differ from sender)</div>
+            </div>
+            <div class="settings-field" style="display: flex; align-items: center; gap: var(--space-3); margin-top: var(--space-4);">
+              <button class="settings-save-webhook-btn" id="settings-save-email-btn">Save</button>
+              <button class="btn-ghost" id="settings-test-email-btn" style="display: inline-flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-4); background: transparent; color: var(--color-text-secondary); font-size: var(--font-size-xs); font-weight: var(--font-weight-semibold); border-radius: var(--radius-sm); border: 1px solid var(--color-border); transition: all var(--duration-fast);">Test Email</button>
+              <span class="settings-test-status hidden" id="settings-email-status"></span>
+            </div>
+            <div class="settings-toggle-row">
+              <div class="settings-toggle-info">
+                <div class="settings-toggle-label">Price Alerts</div>
+                <div class="settings-toggle-description">Email when price targets are hit</div>
+              </div>
+              <label class="settings-toggle" aria-label="Toggle price alert emails">
+                <input type="checkbox" id="email-price-alerts" aria-label="Price Alerts">
+                <span class="settings-toggle-slider"></span>
+              </label>
+            </div>
+            <div class="settings-toggle-row">
+              <div class="settings-toggle-info">
+                <div class="settings-toggle-label">Earnings Alerts</div>
+                <div class="settings-toggle-description">Email before earnings reports</div>
+              </div>
+              <label class="settings-toggle" aria-label="Toggle earnings alert emails">
+                <input type="checkbox" id="email-earnings-alerts" aria-label="Earnings Alerts">
+                <span class="settings-toggle-slider"></span>
+              </label>
+            </div>
+            <div class="settings-toggle-row">
+              <div class="settings-toggle-info">
+                <div class="settings-toggle-label">Weekly Digest</div>
+                <div class="settings-toggle-description">Weekly portfolio performance summary</div>
+              </div>
+              <label class="settings-toggle" aria-label="Toggle weekly digest email">
+                <input type="checkbox" id="email-weekly-digest" aria-label="Weekly Digest">
+                <span class="settings-toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Market ticker: saved independently of notification preferences. -->
+        <section class="settings-section market-ticker-section" id="market-ticker-settings" aria-labelledby="market-ticker-heading">
+          <div class="settings-section-header">
+            <h2 class="settings-section-title" id="market-ticker-heading">Market Ticker</h2>
+            <p class="settings-section-description">Choose the market quotes shown above your portfolio.</p>
+          </div>
+          <div class="settings-section-body">
+            <p class="market-ticker-loading" id="market-ticker-loading" role="status">Loading ticker settings…</p>
+            <form id="market-ticker-form" hidden>
+              <div class="market-ticker-columns">
+                <div>
+                  <div class="settings-toggle-row">
+                    <div class="settings-toggle-info"><label class="settings-toggle-label" for="market-ticker-enabled">Show Market Ticker</label><p class="settings-toggle-description">Display market quotes below portfolio navigation.</p></div>
+                    <label class="settings-toggle"><input id="market-ticker-enabled" type="checkbox" role="switch" aria-label="Show market ticker"><span class="settings-toggle-slider"></span></label>
+                  </div>
+                  <div class="market-ticker-list-heading"><h3>Instruments</h3><span class="market-ticker-count" id="market-ticker-count"></span></div>
+                  <p class="settings-help">Use the arrows to reorder. Select an instrument to edit its symbol or name.</p>
+                  <div id="market-ticker-list" aria-label="Market ticker instruments"></div>
+                  <button type="button" class="btn-ghost market-ticker-add" id="market-ticker-add">＋ Add instrument</button>
+                </div>
+                <div class="market-ticker-options">
+                  <div class="settings-toggle-row">
+                    <div class="settings-toggle-info"><label class="settings-toggle-label" for="market-ticker-charts">Area Charts on Desktop</label><p class="settings-toggle-description">Show mini charts at desktop widths. Mobile always uses compact quotes.</p></div>
+                    <label class="settings-toggle"><input id="market-ticker-charts" type="checkbox" role="switch" aria-label="Area charts on desktop"><span class="settings-toggle-slider"></span></label>
+                  </div>
+                  <p class="settings-help">Select Desktop and Mobile for each instrument to control the list on each device.</p>
+                  <p class="settings-help">With charts off, desktop uses the same compact, three-line quote layout as mobile. Appearance follows the app theme.</p>
+                </div>
+              </div>
+              <div class="market-ticker-footer">
+                <button type="button" class="btn-ghost" id="market-ticker-reset">Reset to defaults</button>
+                <span id="market-ticker-save-status" class="settings-test-status" role="status" aria-live="polite"></span>
+                <button type="submit" class="settings-save-webhook-btn" id="market-ticker-save" disabled>Save market ticker</button>
+              </div>
+            </form>
+            <p class="market-ticker-error" id="market-ticker-error" role="alert" hidden></p>
+            <button type="button" class="btn-ghost" id="market-ticker-retry" hidden>Retry</button>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <dialog class="market-ticker-dialog" id="market-ticker-dialog" aria-labelledby="market-ticker-dialog-title">
+    <div class="modal-header">
+      <h2 class="modal-title" id="market-ticker-dialog-title">Add Instrument</h2>
+      <button type="button" class="modal-close" id="market-ticker-dialog-close" aria-label="Close"><svg viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M4 4l10 10M14 4L4 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <form id="market-ticker-instrument-form">
+        <div class="settings-field">
+          <label class="settings-label" for="market-ticker-symbol">TradingView Symbol</label>
+          <input class="settings-input" id="market-ticker-symbol" placeholder="e.g. NASDAQ:AAPL" maxlength="100" autocomplete="off" spellcheck="false" required aria-describedby="market-ticker-symbol-help">
+          <p class="settings-help" id="market-ticker-symbol-help">Include the exchange or provider. TradingView confirms data availability when the ticker loads.</p>
+        </div>
+        <div class="settings-field">
+          <label class="settings-label" for="market-ticker-name">Display Name</label>
+          <input class="settings-input" id="market-ticker-name" placeholder="e.g. Apple" maxlength="50" required>
+          <p class="settings-help">Used in Settings and market quotes on desktop and mobile.</p>
+        </div>
+        <div class="market-ticker-visibility">
+          <label><input type="checkbox" id="market-ticker-instrument-desktop" checked> Desktop</label>
+          <label><input type="checkbox" id="market-ticker-instrument-mobile"> Mobile</label>
+        </div>
+        <p class="market-ticker-error" id="market-ticker-dialog-error" role="alert" hidden></p>
+        <div class="form-actions">
+          <button type="button" class="btn-ghost" id="market-ticker-dialog-cancel">Cancel</button>
+          <button type="submit" class="settings-save-webhook-btn" id="market-ticker-dialog-submit">Add instrument</button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+</div>

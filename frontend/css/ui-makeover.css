@@ -1,0 +1,138 @@
+/* Visual direction for the review worktree: one cool accent, layered surfaces,
+   and room around primary content. Finance colors and layouts remain semantic. */
+#content :is(.page-title, .screen-title, .page-header-text h1),
+#content #earnings-watchlist h1 {
+  font-size: var(--font-size-2xl);
+  letter-spacing: -0.035em;
+}
+
+#content :is(.card-header h2, .settings-section-title, .panel-title,
+             .positions-title, .donut-panel-title, .sector-panel-title, .pnl-panel-title) {
+  font-size: 18px;
+  letter-spacing: -0.02em;
+}
+
+#content :is(.settings-section, .stock-card, .ranking-panel, .year-heatmap,
+             .positions-section, .chart-card),
+#content #alerts-screen .card,
+#content #earnings-watchlist .ew-board {
+  border-color: var(--color-border);
+  box-shadow: var(--shadow-sm);
+}
+
+#content #alerts-screen .card-header,
+#content #settings-screen .settings-section-header,
+#content .ranking-panel > .panel-header,
+#content #panel-portfolio .positions-header,
+#content .chart-main .chart-card .card-header {
+  background: var(--color-bg-inset);
+}
+
+#content :is(.settings-input, .settings-select, .settings-textarea,
+             .form-input, .form-select, .universe-search-input, .news-search):focus,
+#content #earnings-watchlist :is(.ew-input-row input, .ew-dropdown):focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-subtle);
+}
+
+#content #earnings-watchlist [data-window][aria-pressed="true"],
+#content .chart-tabs .tab-pill.active {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+  color: var(--color-text-inverse);
+}
+
+/* The portfolio overview is one grouped surface, not three compressed boxes. */
+#content #panel-portfolio .summary-cards {
+  gap: 0;
+  overflow: hidden;
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-md);
+  margin-bottom: var(--space-6);
+}
+#content #panel-portfolio .summary-card {
+  border: 0;
+  border-right: 1px solid var(--color-divider);
+  border-radius: 0;
+  box-shadow: none;
+  padding: var(--space-5) var(--space-6);
+  gap: var(--space-2);
+}
+#content #panel-portfolio .summary-card:nth-child(3) { border-right: 0; }
+#content #panel-portfolio .summary-card:hover {
+  border-color: var(--color-divider);
+  background: var(--color-bg-inset);
+  box-shadow: none;
+}
+#content #panel-portfolio .summary-card:first-child {
+  box-shadow: inset 0 3px var(--color-primary);
+}
+#content #panel-portfolio .summary-card-label {
+  font-family: var(--font-family);
+  font-size: 12px;
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.04em;
+  color: var(--color-text-secondary);
+}
+#content #panel-portfolio .summary-card-value { font-size: var(--font-size-2xl); }
+#content #panel-portfolio .stats-bar { margin-bottom: var(--space-5); }
+#content #panel-portfolio .trade-form { margin-bottom: var(--space-5); }
+#content #panel-portfolio .positions-header { padding: var(--space-4) var(--space-5); }
+
+/* Keep the table's horizontal geometry, but give each holding more vertical air. */
+#content #panel-portfolio .positions-table thead th { padding-block: var(--space-3); }
+#content #panel-portfolio .positions-table tbody td { padding-block: 10px; }
+
+/* Category colors identify allocation, with labels and percentages alongside
+   the visual marks so color is never the only cue. */
+#content #panel-portfolio .allocation-fill { background: var(--color-primary); }
+#content #panel-portfolio .sector-bar {
+  height: 14px;
+  border: 0;
+  background: var(--color-bg-inset);
+}
+#content #panel-portfolio .sector-bar-segment:not(:last-child) {
+  border-right: 2px solid var(--color-bg-elevated);
+}
+#content #panel-portfolio :is(.donut-legend-dot, .sector-legend-dot) {
+  width: 12px;
+  height: 12px;
+}
+
+/* Clearer group boundaries without adding color to every control. */
+#content #alerts-screen .stat-card { padding: var(--space-5); }
+#content #settings-screen .settings-section { overflow: hidden; }
+#content #universe-screen .stock-card { padding: var(--space-5); }
+#content #earnings-watchlist .ew-stats > div { padding: var(--space-4) var(--space-5); }
+#content #earnings-watchlist .ew-controls { gap: var(--space-5); }
+#content .news-toolbar { margin-bottom: var(--space-4); }
+
+/* The market strip remains swipeable on touch screens without a visible bar. */
+#content .ticker-strip { scrollbar-width: none; }
+#content .ticker-strip::-webkit-scrollbar { display: none; }
+
+@media (max-width: 1199px) {
+  #content #panel-portfolio .summary-card:first-child {
+    border-right: 0;
+    border-bottom: 1px solid var(--color-divider);
+  }
+  #content #panel-portfolio .summary-card:nth-child(2) { border-right: 1px solid var(--color-divider); }
+}
+
+@media (max-width: 767px) {
+  #content :is(.page-title, .screen-title, .page-header-text h1),
+  #content #earnings-watchlist h1 { font-size: clamp(24px, 6.5vw, 26px); }
+
+  #content #panel-portfolio .summary-card { padding: var(--space-4); }
+  #content #panel-portfolio .summary-card:first-child .summary-card-value { font-size: 26px; }
+  #content #panel-portfolio .summary-card:not(:first-child) .summary-card-value { font-size: 20px; }
+  #content #panel-portfolio .summary-cards { margin-bottom: var(--space-5); }
+  #content #panel-portfolio .positions-header { padding: var(--space-3) var(--space-4); }
+  #content #panel-portfolio .positions-table tbody td { padding-block: 9px; }
+
+  #content #alerts-screen .stat-card { padding: var(--space-4); }
+  #content #universe-screen .stock-card { padding: var(--space-3); }
+  #content #earnings-watchlist .ew-stats > div { padding: var(--space-4); }
+}

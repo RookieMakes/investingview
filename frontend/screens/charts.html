@@ -1,0 +1,1106 @@
+<!-- ═══════════════════════════════════════════════════════
+     Charts Screen — Multi-chart grid with tabs, S/R drawing
+     Loaded by App.loadScreen('charts')
+     ═══════════════════════════════════════════════════════ -->
+<style>
+  /* ── Chart Tabs (Watchlist tabs below main nav) ── */
+  .chart-tabs {
+    position: sticky;
+    top: var(--nav-height);
+    left: 0;
+    right: 0;
+    height: 40px;
+    background: var(--color-bg);
+    display: flex;
+    align-items: center;
+    padding: 0 var(--space-4);
+    gap: var(--space-2);
+    z-index: 90;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .chart-tabs::-webkit-scrollbar { display: none; }
+
+  .tab-pill {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: 6px var(--space-3);
+    border-radius: var(--radius-full);
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-elevated);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+    color: var(--color-text-secondary);
+    white-space: nowrap;
+    transition: all var(--duration-normal) var(--ease-out);
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .tab-pill:hover { background: var(--color-primary-subtle); border-color: var(--color-primary); color: var(--color-primary); }
+  .tab-pill.active { background: var(--color-primary); border-color: var(--color-primary); color: var(--color-text-inverse); }
+
+  .tab-name {
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .tab-select {
+    display: inline-flex;
+    align-items: center;
+    min-width: 0;
+    font: inherit;
+    color: inherit;
+    letter-spacing: inherit;
+    touch-action: manipulation;
+  }
+
+  .tab-rename, .tab-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    border-radius: var(--radius-full);
+    visibility: hidden;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity var(--duration-fast) var(--ease-out);
+    font-size: 10px;
+  }
+  /* Reveal only after selection, never on hover (which can consume an iOS tap).
+     Preserve each tab's width while hiding inactive actions from focus/hit testing. */
+  .tab-pill.active .tab-rename, .tab-pill.active .tab-close {
+    visibility: visible;
+    pointer-events: auto;
+    opacity: 0.7;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .tab-pill.active .tab-rename:hover, .tab-pill.active .tab-close:hover { opacity: 1; }
+    .tab-pill.active .tab-rename:hover,
+    .tab-pill.active .tab-close:hover { background: rgba(255,255,255,0.2); }
+  }
+
+  .tab-add {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px var(--space-3);
+    border-radius: var(--radius-full);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+    color: var(--color-text-tertiary);
+    border: 1px dashed var(--color-border);
+    transition: all var(--duration-normal) var(--ease-out);
+    white-space: nowrap;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .tab-add:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+    background: var(--color-primary-subtle);
+  }
+
+  /* ── Main Content Area ── */
+  .chart-main {
+    padding: var(--space-4);
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Toolbar ── */
+  .chart-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--space-4);
+    flex-wrap: wrap;
+    gap: var(--space-3);
+  }
+  .toolbar-left, .toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+  }
+  .toolbar-left { flex-wrap: wrap; }
+  .chart-count {
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+    color: var(--color-text-secondary);
+  }
+
+  .add-chart-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    background: var(--color-primary);
+    color: var(--color-text-inverse);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+    border-radius: var(--radius-sm);
+    transition: background var(--duration-fast) var(--ease-out);
+    cursor: pointer;
+    border: none;
+  }
+  .add-chart-btn:hover { background: var(--color-primary-hover); }
+  .add-chart-btn:disabled { opacity: 0.6; cursor: wait; }
+
+  /* ── Chart Grid ── */
+  .chart-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    grid-auto-rows: minmax(300px, 1fr);
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding-bottom: var(--space-4);
+  }
+  @media (max-width: 1200px) { .chart-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 768px) { .chart-grid { grid-template-columns: 1fr; } }
+
+  /* Holdings is one locked system tab with an in-tab portfolio selector. */
+  #holdingsSelector[hidden], #tabAddBtn[hidden] { display: none; }
+  .holdings-selector {
+    display: flex; align-items: center; gap: var(--space-2); min-width: 0;
+    margin-bottom: var(--space-4); border-bottom: 1px solid var(--color-divider);
+  }
+  .holdings-selector-label {
+    font-family: var(--font-mono); font-size: 10px; font-weight: var(--font-weight-semibold);
+    letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--color-text-tertiary); flex-shrink: 0;
+  }
+  .holdings-portfolio-tabs {
+    display: flex; align-items: center; gap: var(--space-2); min-width: 0;
+    overflow-x: auto; scrollbar-width: thin;
+  }
+  .holdings-portfolio-tab {
+    display: inline-flex; align-items: center; gap: var(--space-2); flex-shrink: 0;
+    min-height: 40px; padding: var(--space-2) 2px;
+    border: 0; border-bottom: 2px solid transparent; border-radius: 0;
+    background: none; color: var(--color-text-secondary); cursor: pointer;
+    font-family: var(--font-mono); font-size: 12px; white-space: nowrap;
+    transition: color var(--duration-fast), border-color var(--duration-fast);
+  }
+  .holdings-portfolio-tab:hover { color: var(--color-text-primary); background: none; border-color: transparent; }
+  .holdings-portfolio-tab[aria-selected="true"] {
+    border-bottom-color: var(--color-text-primary); color: var(--color-text-primary);
+    font-weight: var(--font-weight-bold);
+  }
+  .holdings-portfolio-tab[aria-selected="true"] .holdings-currency { border-color: currentColor; color: inherit; }
+  .holdings-currency {
+    padding: 2px 5px; background: transparent; border: 1px solid var(--color-border); border-radius: 4px;
+    font-family: var(--font-mono); font-size: 10px; font-weight: var(--font-weight-medium);
+    letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-text-secondary);
+  }
+  .holdings-dropdown {
+    display: none; width: 100%; min-width: 0; min-height: 44px; padding: 0 var(--space-3);
+    background: var(--color-bg-elevated); color: var(--color-text-primary);
+    border: 1px solid var(--color-border); border-radius: var(--radius-sm);
+    font-family: var(--font-mono); font-size: var(--font-size-sm); font-weight: var(--font-weight-medium);
+    cursor: pointer; align-items: center; justify-content: space-between; gap: var(--space-2);
+  }
+  .holdings-dropdown:focus { border-color: var(--color-text-primary); outline: none; box-shadow: 2px 2px 0 var(--color-text-primary); }
+  .holdings-dropdown-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }
+  .holdings-dropdown .chevron { width: 14px; height: 14px; flex-shrink: 0; color: var(--color-text-secondary); transition: transform var(--duration-fast); }
+  .holdings-dropdown[aria-expanded="true"] .chevron { transform: rotate(180deg); }
+  .holdings-menu {
+    position: absolute; top: calc(100% + var(--space-1)); left: 0; right: 0;
+    max-height: 280px; overflow-y: auto; background: var(--color-bg-elevated);
+    border: 1px solid var(--color-border); border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg); z-index: 300; padding: var(--space-1);
+  }
+  .holdings-menu[hidden] { display: none; }
+  .holdings-option {
+    display: flex; align-items: center; gap: var(--space-2); width: 100%; min-width: 0;
+    min-height: 44px; padding: var(--space-2) var(--space-3);
+    background: none; border: 0; border-radius: var(--radius-sm); cursor: pointer;
+    color: var(--color-text-secondary); font-family: var(--font-mono);
+    font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); text-align: left;
+  }
+  .holdings-option:hover { color: var(--color-text-primary); background: var(--color-bg-subtle); }
+  .holdings-option[aria-selected="true"] { color: var(--color-text-primary); font-weight: var(--font-weight-bold); }
+  .holdings-option[aria-selected="true"] .holdings-currency { border-color: currentColor; color: inherit; }
+  .holdings-option-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .holdings-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .holdings-chart-card { min-width: 0; }
+  .holdings-ticker {
+    padding: 0; border: 0; background: none; color: var(--color-text-primary); cursor: pointer;
+    font-family: var(--font-mono); font-size: var(--font-size-md); font-weight: var(--font-weight-bold);
+    letter-spacing: 0.02em;
+  }
+  .holdings-ticker:hover { text-decoration: underline; text-underline-offset: 3px; }
+  .holdings-state {
+    grid-column: 1 / -1; min-height: 260px; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: var(--space-3); padding: var(--space-6);
+    border: 1px solid var(--color-divider); border-radius: var(--radius-lg);
+    text-align: center; color: var(--color-text-secondary); font-size: var(--font-size-sm);
+  }
+  .holdings-state p { margin: 0; overflow-wrap: anywhere; }
+  .holdings-portfolio-tab:focus-visible, .holdings-dropdown:focus-visible, .holdings-option:focus-visible,
+  .holdings-ticker:focus-visible, .holdings-chart-card .card-btn:focus-visible {
+    outline: 2px solid var(--color-text-primary); outline-offset: 2px;
+  }
+  @media (max-width: 1200px) { .holdings-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 768px) {
+    .holdings-grid { grid-template-columns: minmax(0, 1fr); }
+    .holdings-selector { position: relative; flex-direction: column; align-items: stretch; gap: var(--space-2); padding-bottom: var(--space-3); }
+    .holdings-portfolio-tabs { display: none; }
+    .holdings-dropdown { display: flex; }
+    .holdings-chart-card .card-btn { width: 44px; height: 44px; }
+    .holdings-ticker { min-height: 44px; }
+  }
+
+  /* ── Chart Card ── */
+  .chart-card {
+    background: var(--color-bg-elevated);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--color-divider);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: box-shadow var(--duration-normal) var(--ease-out);
+    min-height: 300px;
+  }
+  .chart-card:hover { box-shadow: var(--shadow-md); }
+
+  .card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 1px solid var(--color-divider);
+    min-height: 48px;
+  }
+  .card-left {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    flex: 1;
+    min-width: 0;
+  }
+
+  .ticker-input {
+    font-size: var(--font-size-md);
+    font-weight: var(--font-weight-bold);
+    color: var(--color-text-primary);
+    background: transparent;
+    border: none;
+    outline: none;
+    width: auto;
+    min-width: 60px;
+    max-width: 120px;
+    text-transform: uppercase;
+    -webkit-text-transform: uppercase;
+  }
+  .ticker-input::placeholder { color: var(--color-text-tertiary); font-weight: var(--font-weight-medium); }
+  .ticker-input:focus { outline: 2px solid var(--color-primary); outline-offset: 2px; border-radius: var(--radius-sm); }
+
+  .price-block {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-2);
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+  .price-val {
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-semibold);
+    font-family: var(--font-mono);
+    color: var(--color-text-primary);
+    white-space: nowrap;
+  }
+  .price-val.up { color: var(--color-stock-up); }
+  .price-val.dn { color: var(--color-stock-down); }
+  .price-chg {
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-medium);
+    padding: 1px var(--space-1);
+    border-radius: var(--radius-sm);
+    white-space: nowrap;
+  }
+  .price-chg.up { color: var(--color-stock-up); background: var(--color-success-subtle); }
+  .price-chg.dn { color: var(--color-stock-down); background: var(--color-error-subtle); }
+
+  .card-right {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    flex-shrink: 0;
+  }
+  .card-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-sm);
+    color: var(--color-text-secondary);
+    transition: all var(--duration-fast) var(--ease-out);
+    font-size: var(--font-size-sm);
+    border: none;
+    background: none;
+    cursor: pointer;
+  }
+  .card-btn:hover { background: var(--color-bg-subtle); color: var(--color-text-primary); }
+  .card-btn:active { background: var(--color-primary-muted); }
+  .card-btn:focus-visible { outline: 2px solid var(--color-text-primary); outline-offset: 2px; }
+  .card-btn svg { width: 18px; height: 18px; flex: none; }
+  .card-btn.sr-active { background: var(--color-primary-subtle); color: var(--color-primary); }
+  .card-btn[data-action="delete"]:hover { background: var(--color-error-subtle); color: var(--color-error); }
+
+  /* Card Body */
+  .card-body {
+    flex: 1;
+    position: relative;
+    min-height: 260px;
+    background: var(--color-bg);
+  }
+  .tv-chart-wrap {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    inset: 0;
+  }
+
+  .grid-pattern-toggle {
+    position: absolute;
+    z-index: 4;
+    top: 10px;
+    left: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    color: var(--color-primary);
+    background: var(--color-bg-elevated);
+    border: 1px solid var(--color-divider);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+  }
+  .grid-pattern-toggle[hidden],
+  .grid-pattern-toggle[aria-pressed="true"] .eye-closed,
+  .grid-pattern-toggle[aria-pressed="false"] .eye-open { display: none; }
+  .grid-pattern-toggle svg { width: 18px; height: 18px; }
+  .grid-pattern-toggle:hover { background: var(--color-bg-subtle); }
+  .grid-pattern-toggle:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+  @media (max-width: 767px) {
+    .grid-pattern-toggle { width: 44px; height: 44px; }
+  }
+
+  .draw-hint {
+    position: absolute;
+    bottom: var(--space-2);
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 10px;
+    font-weight: var(--font-weight-medium);
+    color: var(--color-text-tertiary);
+    background: var(--color-bg-elevated);
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-sm);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--duration-fast) var(--ease-out);
+    white-space: nowrap;
+    z-index: 10;
+  }
+  .card-body.draw-mode .draw-hint { opacity: 1; }
+  .card-body.draw-mode { cursor: crosshair; }
+
+  /* Card Status */
+  .card-status {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    background: var(--color-bg);
+    z-index: 5;
+  }
+  .card-status.hidden { display: none; }
+
+  .card-btn[data-action="reload"] svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  /* Empty card */
+  .chart-card.empty .card-header { border-bottom: none; }
+  .chart-card.empty .card-body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-text-tertiary);
+    font-size: var(--font-size-sm);
+  }
+
+  /* ── S/R Picker Popup ── */
+  .sr-picker {
+    position: fixed;
+    background: var(--color-bg-elevated);
+    border: 1px solid var(--color-divider);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+    padding: var(--space-3);
+    z-index: 3000;  /* Must be above expand-modal (2000) */
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    white-space: nowrap;
+  }
+  .sr-picker-price {
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-semibold);
+    font-family: var(--font-mono);
+    color: var(--color-text-primary);
+    margin-right: var(--space-2);
+  }
+  .sr-picker-btn {
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-sm);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+    transition: all var(--duration-fast) var(--ease-out);
+    cursor: pointer;
+    border: none;
+  }
+  .sr-picker-btn.sup {
+    color: var(--color-chart-support, var(--color-success));
+    background: var(--color-success-subtle);
+  }
+  .sr-picker-btn.sup:hover {
+    background: var(--color-chart-support, var(--color-success));
+    color: var(--color-text-inverse);
+  }
+  .sr-picker-btn.res {
+    color: var(--color-chart-resistance, var(--color-error));
+    background: var(--color-error-subtle);
+  }
+  .sr-picker-btn.res:hover {
+    background: var(--color-chart-resistance, var(--color-error));
+    color: var(--color-text-inverse);
+  }
+  .sr-picker-cancel {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: var(--radius-full);
+    color: var(--color-text-tertiary);
+    font-size: var(--font-size-sm);
+    border: none;
+    background: none;
+    cursor: pointer;
+  }
+  .sr-picker-cancel:hover { background: var(--color-bg-subtle); color: var(--color-text-primary); }
+  .lc-tracking-tooltip {
+    position: absolute; display: none;
+    padding: 8px 12px;
+    background: var(--color-bg-elevated);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-md);
+    pointer-events: none; z-index: 10;
+    font-family: var(--font-mono); font-size: var(--font-size-xs); line-height: 1.25; white-space: nowrap;
+  }
+  .lc-tt-price { font-family: var(--font-mono); font-size: 18px; font-weight: 600; margin: 1px 0; color: var(--color-text-primary); }
+  .lc-tt-time  { color: var(--color-text-primary); font-size: var(--font-size-xs); }
+  .lc-tt-volume { color: var(--color-text-primary); font-size: 11px; margin-top: 1px; }
+
+  /* ── Add Chart Modal ── */
+  .add-chart-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--duration-slow) var(--ease-out);
+    backdrop-filter: blur(4px);
+  }
+  .add-chart-modal.open { opacity: 1; pointer-events: auto; }
+
+  .add-chart-content {
+    width: 400px;
+    background: var(--color-bg-elevated);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    padding: var(--space-6);
+    transform: scale(0.95);
+    transition: transform var(--duration-slow) var(--ease-out);
+  }
+  .add-chart-modal.open .add-chart-content { transform: scale(1); }
+
+  .add-chart-title {
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text-primary);
+    margin-bottom: var(--space-4);
+  }
+  .add-chart-input {
+    width: 100%;
+    padding: var(--space-3);
+    font-size: var(--font-size-md);
+    font-weight: var(--font-weight-medium);
+    background: var(--color-bg-subtle);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    color: var(--color-text-primary);
+    text-transform: uppercase;
+    margin-bottom: var(--space-2);
+    outline: none;
+  }
+  .add-chart-input:focus { border-color: var(--color-primary); }
+  .add-chart-input::placeholder { color: var(--color-text-tertiary); text-transform: none; }
+
+  .add-chart-error {
+    font-size: var(--font-size-sm);
+    color: var(--color-error);
+    margin-bottom: var(--space-3);
+    min-height: 20px;
+  }
+  .add-chart-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-2);
+  }
+  .add-chart-cancel {
+    padding: var(--space-2) var(--space-4);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+    color: var(--color-text-secondary);
+    border-radius: var(--radius-sm);
+    transition: all var(--duration-fast) var(--ease-out);
+    border: none;
+    background: none;
+    cursor: pointer;
+  }
+  .add-chart-cancel:hover { background: var(--color-bg-subtle); color: var(--color-text-primary); }
+
+  .add-chart-submit {
+    padding: var(--space-2) var(--space-4);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+    background: var(--color-primary);
+    color: var(--color-text-inverse);
+    border-radius: var(--radius-sm);
+    transition: background var(--duration-fast) var(--ease-out);
+    border: none;
+    cursor: pointer;
+  }
+  .add-chart-submit:hover { background: var(--color-primary-hover); }
+
+  /* ── Time Interval Selector ── */
+  .time-interval-bar {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    flex-shrink: 0;
+  }
+  .time-interval-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+    font-size: 10px;
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text-tertiary);
+    transition: all var(--duration-fast) var(--ease-out);
+    cursor: pointer;
+    border: none;
+    background: none;
+    white-space: nowrap;
+    min-width: 24px;
+    height: 22px;
+  }
+  .time-interval-btn:hover {
+    background: var(--color-bg-subtle);
+    color: var(--color-text-primary);
+  }
+  .time-interval-btn.active {
+    background: var(--color-primary-subtle);
+    color: var(--color-primary);
+  }
+
+  /* ── Auto-Refresh Interval ── */
+  .refresh-interval-group {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+  .refresh-interval-select {
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-sm);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-medium);
+    font-family: var(--font-family);
+    color: var(--color-text-secondary);
+    background: var(--color-bg-elevated);
+    border: 1px solid var(--color-border);
+    cursor: pointer;
+    outline: none;
+    transition: all var(--duration-fast) var(--ease-out);
+  }
+  .refresh-interval-select:hover {
+    border-color: var(--color-primary);
+    color: var(--color-text-primary);
+  }
+  .refresh-interval-select:focus {
+    border-color: var(--color-primary);
+  }
+
+  /* ── Delete Chart Confirmation Modal ── */
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 2500;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity var(--duration-normal) var(--ease-out);
+  }
+  .modal-backdrop.open { display: flex; opacity: 1; }
+  .modal-card {
+    background: var(--color-bg-elevated);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-xl);
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    animation: modal-enter var(--duration-slow) var(--ease-spring);
+  }
+  @keyframes modal-enter { from { opacity: 0; transform: translateY(16px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+  .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-5) var(--space-6);
+    border-bottom: 1px solid var(--color-divider);
+  }
+  .modal-title {
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text-primary);
+  }
+  .modal-close {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-sm);
+    color: var(--color-text-secondary);
+    transition: background var(--duration-fast);
+    border: none;
+    background: none;
+    cursor: pointer;
+  }
+  .modal-close:hover { background: var(--color-bg-subtle); }
+  .modal-close svg { width: 18px; height: 18px; }
+  .modal-body { padding: var(--space-6); }
+  .delete-modal-body { display: flex; flex-direction: column; gap: var(--space-3); }
+  .delete-modal-warning {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
+    line-height: var(--line-height-normal);
+  }
+  .delete-modal-warning strong { color: var(--color-text-primary); font-weight: var(--font-weight-semibold); }
+  .delete-modal-actions { display: flex; justify-content: flex-end; gap: var(--space-3); margin-top: var(--space-2); }
+  .btn-ghost {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-5);
+    background: transparent;
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-semibold);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--color-border);
+    transition: all var(--duration-fast);
+    cursor: pointer;
+  }
+  .btn-ghost:hover { background: var(--color-bg-subtle); color: var(--color-text-primary); }
+  .btn-danger {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-5);
+    background: var(--color-error);
+    color: var(--color-text-inverse);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-semibold);
+    border-radius: var(--radius-sm);
+    border: none;
+    cursor: pointer;
+    transition: all var(--duration-fast);
+  }
+  .btn-danger:hover { background: #E0342B; }
+  .btn-danger:active { transform: scale(0.97); }
+  /* Safe vertical centering: identical when content fits; tall Live content
+     top-aligns and scrolls instead of sliding cut-off behind the top nav. */
+  .chart-main .chart-tool-btn { display: inline-flex; align-items: center; gap: var(--space-1); padding: var(--space-2) var(--space-3); font-size: var(--font-size-xs); font-weight: var(--font-weight-semibold); border-radius: var(--radius-sm); border: 1px solid var(--color-border); transition: all var(--duration-fast); background: none; cursor: pointer; }
+
+  /* ── Live Chart standalone tab ── */
+  #liveChartSection { display: none; flex-direction: column; gap: 12px; }
+  #liveChartSection.visible { display: flex; }
+  .live-card {
+    background: var(--color-bg-elevated);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--color-divider);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-height: 520px;
+  }
+  .live-toolbar {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 1px solid var(--color-divider);
+    flex-wrap: wrap;
+  }
+  .live-ticker-input {
+    font-family: var(--font-mono);
+    font-size: var(--font-size-md);
+    font-weight: var(--font-weight-bold);
+    color: var(--color-text-primary);
+    background: transparent;
+    border: none;
+    outline: none;
+    width: 90px;
+    text-transform: uppercase;
+  }
+  .live-ticker-input:focus { outline: 2px solid var(--color-primary); outline-offset: 2px; border-radius: var(--radius-sm); }
+  .live-badge {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: var(--font-weight-bold);
+    padding: 2px 8px;
+    border-radius: var(--radius-full);
+    border: 1px solid var(--color-border);
+    color: var(--color-text-secondary);
+    white-space: nowrap;
+  }
+  .live-badge.on { color: var(--color-stock-up); border-color: var(--color-stock-up); }
+  .live-badge.off { color: var(--color-text-tertiary); }
+  .live-badge.paused { color: var(--color-stock-down); border-color: var(--color-stock-down); }
+  .live-chart-body { position: relative; height: 460px; background: var(--color-bg); }
+  .live-chart-body .tv-chart-wrap { position: absolute; inset: 0; }
+  .live-resume-overlay {
+    position: absolute;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: var(--space-3);
+    background: rgba(0,0,0,0.45);
+    z-index: 6;
+  }
+  .live-resume-overlay.visible { display: flex; }
+  .live-resume-btn {
+    padding: var(--space-3) var(--space-5);
+    background: var(--color-primary);
+    color: var(--color-text-inverse);
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: var(--font-weight-semibold);
+    border-radius: var(--radius-sm);
+    border: none;
+    cursor: pointer;
+  }
+
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--color-text-tertiary); border-radius: var(--radius-full); }
+
+  /* ── System Tab (200 EMA) ── */
+  .system-tab {
+    background: var(--color-bg-elevated);
+    border-style: dashed !important;
+    gap: var(--space-1);
+  }
+  .system-tab .tab-badge-icon {
+    opacity: 0.6;
+    flex-shrink: 0;
+  }
+  .system-tab .tab-timestamp {
+    font-size: 10px;
+    color: var(--color-text-tertiary);
+    white-space: nowrap;
+    opacity: 0.8;
+  }
+  /* Selected system tabs use the same accent surface and foreground as user tabs. */
+  .system-tab.active .tab-badge-icon,
+  .system-tab.active .tab-timestamp {
+    color: inherit;
+    opacity: 1;
+  }
+
+  /* ── Earnings System Tab Sections ── */
+  #earningsSections {
+    display: none;
+  }
+
+  #earningsSections.visible {
+    display: block;
+  }
+
+  .earnings-section {
+    margin-bottom: var(--space-4);
+  }
+
+  .earnings-section:last-child {
+    margin-bottom: 0;
+  }
+
+  .earnings-label {
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+    color: var(--color-text-secondary);
+    padding: var(--space-2) 0;
+  }
+
+  .earnings-label-empty {
+    font-size: var(--font-size-xs);
+    color: var(--color-text-tertiary);
+    padding: var(--space-1) 0;
+    margin-top: calc(-1 * var(--space-1));
+  }
+
+  .earnings-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+  }
+
+  @media (max-width: 1200px) { .earnings-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 768px) { .earnings-grid { grid-template-columns: 1fr; } }
+
+  /* Tokens live in css/styles.css (:root, global Terminal Precision) —
+     no per-screen pinning. Candle/SMA/volume/S-R paint untouched. */
+  /* Sticky tab strip: opaque + separated */
+  .chart-tabs { background: var(--color-bg); border-bottom: 1px solid var(--color-divider); }
+  /* Tabs: underline console (rename/close contract unchanged) */
+  .tab-pill { background: none; border: none; border-bottom: 2px solid transparent; border-radius: 0; font-family: var(--font-mono); font-size: 12px; transition: color var(--duration-fast), border-color var(--duration-fast); }
+  .tab-pill:hover { background: none; border-color: transparent; color: var(--color-text-primary); }
+  .tab-pill.active { background: none; border-color: var(--color-text-primary); color: var(--color-text-primary); font-weight: var(--font-weight-bold); }
+  .tab-pill:active { transform: translate(1px, 1px); }
+  .tab-pill.active .tab-rename:hover, .tab-pill.active .tab-close:hover { background: var(--color-bg-inset); }
+  .tab-add { font-family: var(--font-mono); font-size: 12px; border-radius: var(--radius-sm); }
+  /* Cards: flat console, mono figures */
+  .chart-card:hover { box-shadow: var(--shadow-sm); border-color: var(--color-border-strong); }
+  .card-header { min-height: 44px; }
+  .ticker-input { font-family: var(--font-mono); }
+  .price-val, .price-block { font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; }
+  .add-chart-btn { font-family: var(--font-mono); font-size: 12px; }
+  .add-chart-btn:active { transform: translate(1px, 1px); }
+  .chart-count { font-family: var(--font-mono); font-size: 12px; }
+  /* Intervals: mono micro, tonal active */
+  .time-interval-btn { font-family: var(--font-mono); }
+  .time-interval-btn.active { background: var(--color-text-primary); color: var(--color-bg); }
+  .refresh-interval-select { font-family: var(--font-mono); font-size: 11px; }
+  .refresh-interval-select:focus { border-color: var(--color-text-primary); box-shadow: 2px 2px 0 var(--color-text-primary); }
+  /* Shared modal template: calm entrance, token canvas, mono tools */
+  .modal-card { animation: modal-enter var(--duration-normal) var(--ease-out); }
+  @keyframes modal-enter { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+  .chart-main .chart-tool-btn { font-family: var(--font-mono); }
+  @media (max-width: 767px) {
+    /* Grid card header: keep -$X.XX (-Y.YY%) on one line at ~390px widths */
+    .card-left { gap: var(--space-2); }
+    .ticker-input { max-width: 84px; }
+  }
+  @media (max-width: 380px) {
+    .card-header .price-val { font-size: var(--font-size-xs); }
+  }
+
+  /* System-inspired chart workspace: let the plot lead, keep all actions in the card header. */
+  .chart-tabs .tab-pill {
+    min-height: 36px;
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid transparent;
+    border-radius: var(--radius-md);
+    font-family: var(--font-family);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+  }
+  .chart-tabs .tab-pill:hover { background: var(--color-bg-subtle); border-color: transparent; }
+  .chart-tabs .tab-pill.active {
+    background: var(--color-bg-elevated);
+    border-color: var(--color-border);
+    box-shadow: var(--shadow-sm);
+    font-weight: var(--font-weight-semibold);
+  }
+  .chart-tabs .tab-add, .chart-main .add-chart-btn { border-radius: var(--radius-md); font-family: var(--font-family); }
+  .chart-main .chart-grid { gap: var(--space-4); }
+  .chart-main .chart-card {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    transition: border-color var(--duration-normal) var(--ease-out), box-shadow var(--duration-normal) var(--ease-out);
+  }
+  .chart-main .chart-card:hover { border-color: var(--color-border-strong); box-shadow: var(--shadow-md); }
+  .chart-main .chart-card .card-header {
+    min-height: 60px;
+    padding: var(--space-3) var(--space-4);
+    gap: var(--space-2);
+    background: var(--color-bg-elevated);
+    border-bottom: 1px solid var(--color-divider);
+  }
+  .chart-main .chart-card .ticker-input,
+  .chart-main .chart-card .holdings-ticker {
+    font-family: var(--font-family);
+    font-size: var(--font-size-base);
+    font-weight: var(--font-weight-bold);
+    letter-spacing: -0.01em;
+  }
+  .chart-main .chart-card .price-val { font-size: var(--font-size-sm); }
+  .chart-main .chart-card .price-chg { font-weight: var(--font-weight-semibold); padding: 3px 6px; border-radius: 6px; }
+  .chart-main .chart-card .card-btn {
+    width: 34px;
+    height: 34px;
+    border-radius: var(--radius-sm);
+    color: var(--color-text-secondary);
+  }
+  .chart-main .chart-card .card-btn[data-action="reload"] svg { width: 18px; height: 18px; }
+  .chart-main .chart-card .card-btn:hover { color: var(--color-text-primary); background: var(--color-bg-subtle); }
+  .chart-main .chart-card .card-btn.sr-active { color: var(--color-primary); background: var(--color-primary-subtle); }
+  .chart-main .chart-card .card-body,
+  .chart-main .chart-card .card-status { background: var(--color-bg-elevated); }
+  .chart-main .chart-card .grid-pattern-toggle { border-radius: var(--radius-md); box-shadow: var(--shadow-sm); }
+
+  @media (max-width: 1200px) {
+    .chart-main .chart-card .card-left { flex-direction: column; align-items: flex-start; gap: 2px; }
+    .chart-main .chart-card .price-block { gap: var(--space-1); max-width: 100%; }
+  }
+  @media (max-width: 767px) {
+    .chart-main .chart-card .card-header { min-height: 72px; padding: var(--space-2) var(--space-3); }
+    .chart-main .chart-card .ticker-input { min-width: 7ch; max-width: 100%; }
+    .chart-main .chart-card .card-right { gap: 2px; }
+    .chart-main .chart-card .card-btn { width: 44px; height: 44px; }
+    .chart-main .holdings-chart-card .card-btn { width: 44px; height: 44px; }
+    .chart-main .chart-card .card-body { min-height: 260px; }
+  }
+  @media (max-width: 380px) {
+    .chart-main .chart-card .card-header { flex-wrap: wrap; padding-inline: var(--space-3); }
+    .chart-main .chart-card .card-left { flex: 1 1 100%; flex-direction: row; align-items: baseline; flex-wrap: wrap; }
+    .chart-main .chart-card .card-right { width: 100%; justify-content: flex-end; }
+    .chart-main .chart-card .price-val { font-size: 12px; }
+    .chart-main .chart-card .price-chg { font-size: 11px; padding-inline: 3px; }
+  }
+</style>
+
+<!-- CHART TABS (Watchlist tabs) -->
+<div class="chart-tabs" id="tabBar" role="tablist" aria-label="Chart watchlists">
+  <button class="tab-add" id="tabAddBtn" aria-label="Add new tab">+ Add tab</button>
+</div>
+
+<!-- MAIN CONTENT -->
+<main class="chart-main" id="chartMainContent">
+  <!-- TOOLBAR -->
+  <div class="chart-toolbar">
+    <div class="toolbar-left">
+      <span class="chart-count" id="chartCount">0 charts</span>
+      <button class="add-chart-btn" id="addChartBtn" aria-label="Add a new chart">+ Add Chart</button>
+      <button class="add-chart-btn" id="refreshAllChartsBtn" aria-label="Refresh all charts in this tab">↻ Refresh All</button>
+      <span id="refreshAllChartsStatus" role="status" aria-live="polite"></span>
+    </div>
+    <div class="toolbar-right"></div>
+  </div>
+
+  <div class="holdings-selector" id="holdingsSelector" hidden></div>
+
+  <!-- EARNINGS SECTIONS (separate grids for each section) -->
+  <div id="earningsSections"></div>
+
+  <!-- LIVE CHART (standalone single-chart tab, rendered by Charts._renderLiveTab) -->
+  <div id="liveChartSection" style="display:none;"></div>
+
+  <!-- MAIN CHART GRID (for non-earnings tabs) -->
+  <div class="chart-grid" id="chartGrid" role="list" aria-label="Chart grid">
+    <!-- Chart cards rendered by Charts.renderChartGrid() -->
+  </div>
+</main>
+
+
+
+
+
+<div class="sr-picker" id="srPicker" role="dialog" aria-label="Choose line type" style="display:none;">
+  <span class="sr-picker-price" id="srPickerPrice"></span>
+  <button class="sr-picker-btn sup" id="srPickerSupport">Support</button>
+  <button class="sr-picker-btn res" id="srPickerResistance">Resistance</button>
+  <button class="sr-picker-cancel" id="srPickerCancel" aria-label="Cancel">&times;</button>
+</div>
+
+
+<div class="add-chart-modal" id="addChartModal" role="dialog" aria-modal="true" aria-label="Add chart" style="display:none;">
+  <div class="add-chart-content">
+    <div class="add-chart-title">Add Chart</div>
+    <input class="add-chart-input" id="addChartInput" placeholder="Enter ticker symbol (e.g., AAPL)" maxlength="10" inputmode="text" autocorrect="off" autocapitalize="characters" autocomplete="off" spellcheck="false" aria-label="Ticker symbol"/>
+    <div class="add-chart-error" id="addChartError" role="alert"></div>
+    <div class="add-chart-actions">
+      <button class="add-chart-cancel" id="addChartCancel">Cancel</button>
+      <button class="add-chart-submit" id="addChartSubmit">Add</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ DELETE CHART CONFIRMATION MODAL ═══════════════ -->
+<div class="modal-backdrop delete-modal" id="deleteChartModal" role="dialog" aria-modal="true" aria-label="Delete chart">
+  <div class="modal-card" style="max-width:420px;">
+    <div class="modal-header">
+      <h2 class="modal-title">Delete Chart</h2>
+      <button class="modal-close" id="deleteChartModalClose" aria-label="Close"><svg viewBox="0 0 18 18" fill="none"><path d="M4 4l10 10M14 4L4 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <div class="delete-modal-body">
+        <p class="delete-modal-warning">Are you sure you want to remove <strong id="deleteChartTickerName">this chart</strong> from this watchlist? This action cannot be undone.</p>
+        <div class="delete-modal-actions">
+          <button class="btn-ghost" id="deleteChartCancel">Cancel</button>
+          <button class="btn-danger" id="deleteChartConfirm">Delete</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ DELETE TAB CONFIRMATION MODAL ═══════════════ -->
+<div class="modal-backdrop delete-modal" id="deleteTabModal" role="dialog" aria-modal="true" aria-label="Delete tab">
+  <div class="modal-card" style="max-width:420px;">
+    <div class="modal-header">
+      <h2 class="modal-title">Delete Tab</h2>
+      <button class="modal-close" id="deleteTabModalClose" aria-label="Close"><svg viewBox="0 0 18 18" fill="none"><path d="M4 4l10 10M14 4L4 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <div class="delete-modal-body">
+        <p class="delete-modal-warning">Are you sure you want to delete <strong id="deleteTabName">this tab</strong>? All charts in this tab will be removed.</p>
+        <div class="delete-modal-actions">
+          <button class="btn-ghost" id="deleteTabCancel">Cancel</button>
+          <button class="btn-danger" id="deleteTabConfirm">Delete</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

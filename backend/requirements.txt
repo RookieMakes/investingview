@@ -1,0 +1,11 @@
+flask>=3.0
+flask-cors>=4.0
+yfinance>=1.6
+websockets>=13.0
+pandas>=2.0
+openpyxl>=3.1
+requests>=2.31
+feedparser>=6.0
+apscheduler>=3.10
+gunicorn>=21.0
+pytz>=2023.3

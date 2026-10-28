@@ -1,0 +1,1742 @@
+<!-- ═══════════════════════════════════════════════════════════
+     Scanner Screen — Tab-based Ranking Board
+     Loaded by App.loadScreen('scanner') into #content
+     ═══════════════════════════════════════════════════════════ -->
+
+<style>
+  /* ─── SCANNER SCREEN STYLES ─── */
+  .scanner-screen { max-width: 1400px; margin: 0 auto; }
+
+  /* ─── PAGE HEADER ─── */
+  .page-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: var(--space-5); flex-wrap: wrap; gap: var(--space-3);
+  }
+  .page-title-group { display: flex; align-items: center; gap: var(--space-4); }
+  .page-title {
+    font-size: var(--font-size-2xl); font-weight: var(--font-weight-bold);
+    color: var(--color-text-primary); letter-spacing: -0.02em;
+  }
+  .scan-schedule-badge {
+    display: inline-flex; align-items: center; gap: var(--space-2);
+    padding: var(--space-1) var(--space-3); border-radius: var(--radius-full);
+    background: var(--color-primary-subtle); color: var(--color-primary);
+    font-size: var(--font-size-xs); font-weight: var(--font-weight-semibold);
+  }
+  .scan-schedule-badge svg { width: 12px; height: 12px; }
+  .page-meta {
+    display: flex; align-items: center; gap: var(--space-3);
+    font-size: var(--font-size-sm); color: var(--color-text-secondary);
+  }
+  .page-meta-divider { width: 1px; height: 14px; background: var(--color-border); }
+
+  /* ─── CONTROLS BAR ─── */
+  .controls-bar {
+    display: flex; align-items: center; gap: var(--space-4);
+    padding: var(--space-3) var(--space-5); background: var(--color-bg-elevated);
+    border-radius: var(--radius-md); border: 1px solid var(--color-divider);
+    margin-bottom: var(--space-6); flex-wrap: wrap;
+  }
+  .controls-status {
+    display: flex; align-items: center; gap: var(--space-2);
+    font-size: var(--font-size-sm); color: var(--color-text-secondary);
+  }
+  .universe-label {
+    display: inline-flex; align-items: center; gap: var(--space-2);
+    font-size: var(--font-size-sm); color: var(--color-text-secondary);
+  }
+  .universe-label-text { font-weight: var(--font-weight-medium); }
+  .universe-count {
+    font-family: var(--font-mono); font-weight: var(--font-weight-semibold);
+    color: var(--color-text-primary);
+  }
+  .controls-actions {
+    display: flex; align-items: center; gap: var(--space-3); margin-left: auto;
+  }
+
+  /* ─── BUTTONS ─── */
+  .btn {
+    display: inline-flex; align-items: center; gap: var(--space-2);
+    padding: var(--space-2) var(--space-4); border-radius: var(--radius-sm);
+    font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold);
+    transition: all var(--duration-fast) var(--ease-out);
+  }
+  .btn:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+  .btn-primary {
+    background: var(--color-primary); color: var(--color-text-inverse);
+    box-shadow: 0 1px 3px rgba(0,122,255,0.3);
+  }
+  .btn-primary:hover { background: var(--color-primary-hover); box-shadow: 0 2px 8px rgba(0,122,255,0.4); }
+  .btn-primary:active { background: var(--color-primary-active); transform: scale(0.98); }
+  .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+  .btn-primary svg { width: 14px; height: 14px; }
+
+  /* ─── SCANNER TABS ─── */
+  .scanner-tabs {
+    display: flex;
+    gap: var(--space-2);
+    margin-bottom: var(--space-4);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .scanner-tabs::-webkit-scrollbar { display: none; }
+
+  .scanner-tab {
+    flex-shrink: 0;
+    padding: var(--space-2) var(--space-4);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+    color: var(--color-text-secondary);
+    background: var(--color-bg-elevated);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-full);
+    transition: all var(--duration-fast) var(--ease-out);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .scanner-tab:hover {
+    background: var(--color-primary-subtle);
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+  }
+  .scanner-tab.active {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: var(--color-text-inverse);
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     RANKING BOARD — TAB-BASED LAYOUT
+     ═══════════════════════════════════════════════════════════ */
+  .ranking-board {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-5);
+    align-items: start;
+  }
+
+  .right-column {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
+  }
+  .ranking-panel.sma200 .panel-accent { 
+    background: linear-gradient(135deg, #FFD700, #FFA500); 
+  }
+  .ranking-panel.sma200 .panel-icon { 
+    background: rgba(255, 215, 0, 0.1); 
+    color: #FFD700; 
+  }
+
+  /* SMA200-specific table styles */
+  .sma200-table .price-cell {
+    font-family: var(--font-mono);
+    font-weight: var(--font-weight-medium);
+    text-align: right;
+  }
+
+  .sma200-table .sma-cell {
+    font-family: var(--font-mono);
+    color: var(--color-text-secondary);
+    text-align: right;
+  }
+
+  .sma200-table .pct-cell {
+    font-family: var(--font-mono);
+    font-weight: var(--font-weight-semibold);
+    text-align: right;
+  }
+
+  .sma200-table .pct-above {
+    color: var(--color-success);
+  }
+
+  .sma200-table .pct-below {
+    color: var(--color-error);
+  }
+
+  .sma200-table .position-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    padding: 2px 8px;
+    border-radius: var(--radius-full);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-medium);
+  }
+
+  .sma200-table .position-badge.above,
+  .ranking-panel.swing .position-badge.above {
+    background: rgba(0, 212, 170, 0.1);
+    color: var(--color-success);
+  }
+
+  .sma200-table .position-badge.below,
+  .ranking-panel.swing .position-badge.below {
+    background: rgba(255, 77, 109, 0.1);
+    color: var(--color-error);
+  }
+
+  .ranking-panel.swing .position-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    padding: 2px 8px;
+    border-radius: var(--radius-full);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-medium);
+  }
+
+  /* Range pill beside the level value — neutral metadata tag */
+  .ranking-panel.swing .range-pill {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 6px;
+    padding: 1px 6px;
+    border-radius: var(--radius-full);
+    background: var(--color-bg-subtle);
+    color: var(--color-text-tertiary);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: 0.04em;
+    vertical-align: 1px;
+  }
+
+  /* Swing filters — same look and mobile disclosure as quality-score filters */
+  .ranking-panel.swing .qs-filters, .ranking-panel.trade .qs-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--color-divider); }
+  .ranking-panel.swing .qs-filters:empty, .ranking-panel.trade .qs-filters:empty { display: none; }
+  .ranking-panel.swing .qs-filter-label, .ranking-panel.trade .qs-filter-label { font-size: 11px; color: var(--color-text-secondary); }
+  .ranking-panel.swing .qs-chip, .ranking-panel.trade .qs-chip { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; font-family: var(--font-mono); font-size: 11px; color: var(--color-text-secondary); background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-full); cursor: pointer; white-space: nowrap; }
+  .ranking-panel.swing .qs-chip b, .ranking-panel.trade .qs-chip b { font-weight: var(--font-weight-semibold); }
+  .ranking-panel.swing .qs-chip:hover, .ranking-panel.trade .qs-chip:hover { color: var(--color-text-primary); border-color: var(--color-text-tertiary); }
+  .ranking-panel.swing .qs-chip[aria-pressed="true"], .ranking-panel.trade .qs-chip[aria-pressed="true"] { background: var(--color-primary); border-color: var(--color-primary); color: var(--color-text-inverse); }
+  .ranking-panel.swing .qs-chip-reset, .ranking-panel.trade .qs-chip-reset { border-style: dashed; }
+  .ranking-panel.swing .qs-showing, .ranking-panel.trade .qs-showing { margin-left: auto; font-family: var(--font-mono); font-size: 11px; color: var(--color-text-tertiary); }
+  .ranking-panel.swing .qs-filter-toggle, .ranking-panel.trade .qs-filter-toggle { display: none; }
+  .ranking-panel.swing .qs-filter-options, .ranking-panel.trade .qs-filter-options { display: contents; }
+
+  /* Proximity highlight - gold for stocks very close to SMA */
+  .sma200-table .proximity-hot {
+    background: rgba(255, 215, 0, 0.08);
+  }
+
+  /* ─── YTD TAB STYLES ─── */
+  .ranking-panel.ytd .panel-accent { 
+    background: linear-gradient(135deg, #34C759, #30D158); 
+  }
+  .ranking-panel.ytd .panel-icon { 
+    background: rgba(52, 199, 89, 0.1); 
+    color: #34C758; 
+  }
+
+  /* ─── QUALITY SCORE TAB STYLES ─── */
+  .ranking-panel.quality-score .panel-accent { 
+    background: linear-gradient(135deg, #5E5CE6, #BF5AF2); 
+  }
+  .ranking-panel.quality-score .panel-icon { 
+    background: rgba(94, 92, 230, 0.1); 
+    color: #5E5CE6; 
+  }
+
+  /* YTD Table */
+  .ytd-table .ticker-cell {
+    font-weight: var(--font-weight-bold);
+    font-family: var(--font-mono);
+    color: var(--color-text-primary);
+    font-size: var(--font-size-base);
+  }
+
+  /* Horizontal bar */
+  .ytd-bar-cell {
+    width: 40%;
+    padding-right: var(--space-4);
+  }
+  .ytd-bar-track {
+    width: 100%;
+    height: 8px;
+    background: var(--color-bg-subtle);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+  }
+  .ytd-bar-fill {
+    height: 100%;
+    border-radius: var(--radius-full);
+    background: var(--color-success);
+    transition: width var(--duration-slow) var(--ease-out);
+    animation: scoreBarGrow var(--duration-slow) var(--ease-out);
+  }
+  .ytd-bar-fill.negative {
+    background: var(--color-error);
+  }
+
+  /* YTD value */
+  .ytd-value-cell {
+    font-family: var(--font-mono);
+    font-weight: var(--font-weight-semibold);
+    font-size: var(--font-size-sm);
+    text-align: right;
+    white-space: nowrap;
+  }
+  .ytd-positive { color: var(--color-success); }
+  .ytd-negative { color: var(--color-error); }
+
+  /* ─── EARNINGS TAB STYLES ─── */
+  .ranking-panel.earnings .panel-accent { 
+    background: linear-gradient(135deg, #FF9500, #FF6B00); 
+  }
+  .ranking-panel.earnings .panel-icon { 
+    background: rgba(255, 149, 0, 0.1); 
+    color: #FF9500; 
+  }
+
+  .panel-divider {
+    height: 1px;
+    background: var(--color-divider);
+    margin: 0 var(--space-5);
+  }
+
+  /* Earnings table - high specificity to override base ranking-table */
+  .ranking-panel.earnings .ranking-table.earnings-table {
+    table-layout: fixed;
+    width: 100%;
+  }
+
+  .ranking-panel.earnings .ranking-table.earnings-table thead th {
+    text-align: center;
+    width: 25%;
+    padding: var(--space-3) var(--space-4);
+  }
+
+  .ranking-panel.earnings .ranking-table.earnings-table thead th:first-child {
+    text-align: center;
+    width: 25%;
+  }
+
+  .ranking-panel.earnings .ranking-table.earnings-table .ticker-cell {
+    font-weight: var(--font-weight-bold);
+    font-family: var(--font-mono);
+    color: var(--color-text-primary);
+    text-align: center;
+    width: 25%;
+  }
+
+  .ranking-panel.earnings .ranking-table.earnings-table .company-cell {
+    text-align: center;
+    width: 25%;
+  }
+
+  .ranking-panel.earnings .ranking-table.earnings-table .date-cell {
+    font-family: var(--font-mono);
+    color: var(--color-text-secondary);
+    text-align: center;
+    width: 25%;
+  }
+
+  .ranking-panel.earnings .ranking-table.earnings-table .days-cell {
+    font-family: var(--font-mono);
+    font-weight: var(--font-weight-semibold);
+    text-align: center;
+    width: 25%;
+  }
+
+  .earnings-table .days-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 40px;
+    padding: 2px 8px;
+    border-radius: var(--radius-full);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-medium);
+  }
+
+  .earnings-table .days-pill.today {
+    background: rgba(255, 59, 48, 0.1);
+    color: var(--color-error);
+  }
+
+  .earnings-table .days-pill.soon {
+    background: rgba(255, 149, 0, 0.1);
+    color: #FF9500;
+  }
+
+  .earnings-table .days-pill.later {
+    background: var(--color-bg-subtle);
+    color: var(--color-text-secondary);
+  }
+
+  /* Swing + Trade tables — same centered treatment as earnings (5 cols × 20%) */
+  .ranking-panel.swing .ranking-table.earnings-table,
+  .ranking-panel.trade .ranking-table.earnings-table {
+    table-layout: fixed;
+    width: 100%;
+  }
+
+  .ranking-panel.swing .ranking-table.earnings-table thead th,
+  .ranking-panel.trade .ranking-table.earnings-table thead th {
+    text-align: center;
+    width: 20%;
+    padding: var(--space-3) var(--space-4);
+  }
+
+  .ranking-panel.swing .ranking-table.earnings-table thead th:first-child,
+  .ranking-panel.trade .ranking-table.earnings-table thead th:first-child {
+    text-align: center;
+    width: 20%;
+  }
+
+  .ranking-panel.swing .ranking-table.earnings-table .ticker-cell,
+  .ranking-panel.trade .ranking-table.earnings-table .ticker-cell {
+    font-weight: var(--font-weight-bold);
+    font-family: var(--font-mono);
+    color: var(--color-text-primary);
+    text-align: center;
+    width: 20%;
+  }
+
+  .ranking-panel.swing .ranking-table.earnings-table .company-cell,
+  .ranking-panel.trade .ranking-table.earnings-table .company-cell {
+    text-align: center;
+    width: 20%;
+  }
+
+  .ranking-panel.swing .ranking-table.earnings-table .date-cell,
+  .ranking-panel.trade .ranking-table.earnings-table .date-cell {
+    font-family: var(--font-mono);
+    color: var(--color-text-secondary);
+    text-align: center;
+    width: 20%;
+  }
+
+  .ranking-panel.swing .ranking-table.earnings-table .days-cell,
+  .ranking-panel.trade .ranking-table.earnings-table .days-cell {
+    font-family: var(--font-mono);
+    font-weight: var(--font-weight-semibold);
+    text-align: center;
+    width: 20%;
+  }
+
+  /* Trade status pill, dimmed removed rows, mobile change dot (desktop: 5 cols × 20% via shared rules) */
+  .ranking-panel.trade .trade-status {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: var(--radius-full);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-medium);
+    background: var(--color-bg-subtle);
+    color: var(--color-text-secondary);
+    white-space: nowrap;
+  }
+  .ranking-panel.trade tr[data-change="removed"] { opacity: 0.55; }
+
+  /* ─── PANEL VISIBILITY (tab switching — applies to all viewports) ─── */
+
+  /* Hide all panels by default */
+  .ranking-board > .ranking-panel,
+  .ranking-board > .right-column > .ranking-panel {
+    display: none;
+  }
+
+  /* Show only the active panel */
+  .ranking-board > .ranking-panel.active,
+  .ranking-board > .right-column > .ranking-panel.active {
+    display: block;
+  }
+
+  /* Show right-column wrapper when it contains an active panel */
+  .ranking-board > .right-column {
+    display: none;
+  }
+  .ranking-board > .right-column:has(> .ranking-panel.active) {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
+  }
+
+  /* Safety net: prevent page-level horizontal overflow */
+  .ranking-board {
+    overflow-x: hidden;
+  }
+
+  /* ─── RANKING PANEL ─── */
+  .ranking-panel {
+    background: var(--color-bg-elevated);
+    border: 1px solid var(--color-divider);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    transition: box-shadow var(--duration-normal) var(--ease-out);
+  }
+  .ranking-panel:hover { box-shadow: var(--shadow-sm); }
+  .ranking-panel.momentum .panel-accent { background: var(--color-primary); }
+  .ranking-panel.reversal .panel-accent { background: var(--color-success); }
+  .panel-accent { height: 3px; width: 100%; }
+
+  .panel-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: var(--space-4) var(--space-5);
+    border-bottom: 1px solid var(--color-divider);
+  }
+  .panel-title-group { display: flex; align-items: center; gap: var(--space-3); }
+  .panel-icon {
+    width: 32px; height: 32px; border-radius: var(--radius-sm);
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .panel-icon svg { width: 18px; height: 18px; }
+  .ranking-panel.momentum .panel-icon { background: var(--color-primary-subtle); color: var(--color-primary); }
+  .ranking-panel.reversal .panel-icon { background: var(--color-success-subtle); color: var(--color-success); }
+  .panel-title {
+    font-size: var(--font-size-md); font-weight: var(--font-weight-semibold);
+    color: var(--color-text-primary);
+  }
+  .panel-subtitle {
+    font-size: var(--font-size-xs); color: var(--color-text-tertiary); margin-top: 1px;
+  }
+  .panel-count {
+    font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold);
+    color: var(--color-text-tertiary); font-family: var(--font-mono);
+  }
+
+  /* ─── RANKING TABLE ─── */
+  .ranking-table { width: 100%; font-size: var(--font-size-sm); }
+  .ranking-table thead th {
+    padding: var(--space-2) var(--space-4); text-align: left;
+    font-size: var(--font-size-xs); font-weight: var(--font-weight-semibold);
+    color: var(--color-text-tertiary); text-transform: uppercase; letter-spacing: 0.05em;
+    background: var(--color-bg-inset); border-bottom: 1px solid var(--color-divider);
+    user-select: none; white-space: nowrap;
+  }
+  .ranking-table thead th:first-child { width: 48px; text-align: center; }
+  .ranking-table thead th:nth-child(3) { text-align: right; }
+  .ranking-table thead th:nth-child(4) { text-align: right; }
+  .ranking-table thead th:nth-child(5) { text-align: right; }
+
+  .ranking-table tbody tr {
+    border-bottom: 1px solid var(--color-divider);
+    transition: background var(--duration-fast);
+  }
+  .ranking-table tbody tr:last-child { border-bottom: none; }
+  .ranking-table tbody tr:hover { background: var(--color-primary-subtle); }
+
+  .ranking-table td {
+    padding: var(--space-3) var(--space-4);
+    vertical-align: middle; white-space: nowrap;
+  }
+
+  .rank-cell {
+    width: 48px; text-align: center;
+    font-size: var(--font-size-md); font-weight: var(--font-weight-bold);
+    font-family: var(--font-mono); color: var(--color-text-tertiary);
+  }
+  .ranking-table tbody tr:nth-child(1) .rank-cell { color: var(--color-primary); }
+  .ranking-table tbody tr:nth-child(2) .rank-cell { color: var(--color-primary); opacity: 0.75; }
+  .ranking-table tbody tr:nth-child(3) .rank-cell { color: var(--color-primary); opacity: 0.55; }
+
+  .ticker-cell {
+    font-weight: var(--font-weight-bold); font-family: var(--font-mono);
+    color: var(--color-text-primary); font-size: var(--font-size-base);
+  }
+  .ticker-cell a { color: inherit; text-decoration: none; transition: color var(--duration-fast); }
+  .ticker-cell a:hover { color: var(--color-primary); }
+
+  .score-cell {
+    display: flex; align-items: center; justify-content: flex-end; gap: var(--space-2);
+  }
+  .score-bar-track {
+    width: 48px; height: 5px; background: var(--color-bg-subtle);
+    border-radius: var(--radius-full); overflow: hidden; flex-shrink: 0;
+  }
+  .score-bar-fill {
+    height: 100%; border-radius: var(--radius-full);
+    transition: width var(--duration-slow) var(--ease-out);
+  }
+  .score-bar-fill.high { background: var(--color-success); }
+  .score-bar-fill.medium { background: var(--color-warning); }
+  .score-bar-fill.low { background: var(--color-error); }
+  .score-value {
+    font-weight: var(--font-weight-semibold); font-family: var(--font-mono);
+    font-size: var(--font-size-sm); min-width: 24px; text-align: right;
+  }
+
+  .days-cell {
+    text-align: right; font-size: var(--font-size-xs); font-weight: var(--font-weight-medium);
+    color: var(--color-text-secondary);
+  }
+  .days-pill {
+    display: inline-flex; align-items: center; gap: var(--space-1);
+    padding: 2px var(--space-2); border-radius: var(--radius-full);
+    background: var(--color-bg-subtle); font-family: var(--font-mono);
+  }
+
+  /* ─── BELOW-THRESHOLD (grey) ROWS ─── */
+  .ranking-table tbody tr.is-below-threshold {
+    opacity: 0.55; background: var(--color-bg-inset);
+  }
+  .ranking-table tbody tr.is-below-threshold:hover { opacity: 0.8; }
+  .ranking-table tbody tr.is-below-threshold .rank-cell { color: var(--color-text-tertiary); }
+  .ranking-table tbody tr.below-separator td {
+    font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--color-text-tertiary);
+    background: var(--color-bg-inset); padding: var(--space-1) var(--space-4);
+  }
+
+  /* ─── TREND COLUMN ─── */
+  .trend-cell {
+    text-align: right; font-family: var(--font-mono); font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-semibold); white-space: nowrap;
+    display: flex; align-items: center; justify-content: flex-end; gap: 2px;
+  }
+  .trend-cell svg { width: 12px; height: 12px; flex-shrink: 0; }
+  .trend-up { color: var(--color-success); }
+  .trend-down { color: var(--color-error); }
+  .trend-flat { color: var(--color-text-tertiary); font-weight: var(--font-weight-regular); }
+  .trend-new {
+    display: inline-flex; align-items: center; padding: 1px 6px;
+    border-radius: var(--radius-sm); background: var(--color-primary-subtle);
+    color: var(--color-primary); font-size: 10px; font-weight: var(--font-weight-bold);
+    letter-spacing: 0.03em; text-transform: uppercase;
+  }
+
+  /* ─── YTD CHART BUTTON ─── */
+  .ytd-chart-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 18px; height: 18px; margin-left: 4px;
+    border-radius: var(--radius-sm); cursor: pointer;
+    color: var(--color-text-tertiary); background: transparent;
+    border: none; padding: 0; transition: all var(--duration-fast) var(--ease-out);
+    flex-shrink: 0;
+  }
+  .ytd-chart-btn:hover { color: var(--color-primary); background: var(--color-primary-subtle); }
+  .ytd-chart-btn svg { width: 12px; height: 12px; }
+
+  /* ─── YTD + QUALITY HISTORY MODAL (shared contract, mirrors chart-modal mobile) ─── */
+  .ytd-history-modal {
+    position: fixed; inset: 0; z-index: 1100;
+    display: none; align-items: center; justify-content: center;
+    padding: 60px 40px 40px;
+    background: rgba(0,0,0,0.5); backdrop-filter: blur(4px);
+  }
+  .ytd-history-modal.open { display: flex; }
+  .ytd-history-card {
+    background: var(--color-bg-elevated); border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3); width: calc(100% - 80px);
+    max-width: 900px; max-height: 80vh; display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+  .ytd-history-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: var(--space-4) var(--space-6); border-bottom: 1px solid var(--color-divider);
+  }
+  .ytd-history-title {
+    font-size: var(--font-size-lg); font-weight: var(--font-weight-bold);
+    color: var(--color-text-primary);
+  }
+  .ytd-history-close {
+    display: flex; align-items: center; justify-content: center;
+    width: 32px; height: 32px; border-radius: var(--radius-sm);
+    border: none; background: transparent; color: var(--color-text-secondary);
+    cursor: pointer; transition: all var(--duration-fast) var(--ease-out);
+  }
+  .ytd-history-close:hover { background: var(--color-bg-subtle); color: var(--color-text-primary); }
+  .ytd-history-close svg { width: 16px; height: 16px; }
+  .ytd-history-body { padding: var(--space-5); flex: 1; min-height: 0; overflow: hidden; }
+  .ytd-history-chart { width: 100%; height: 350px; min-width: 0; position: relative; }
+  #qsHistoryChart { width: 100%; height: 300px; min-width: 0; position: relative; }
+  .ytd-history-empty {
+    display: flex; align-items: center; justify-content: center;
+    height: 200px; color: var(--color-text-tertiary);
+    font-size: var(--font-size-sm);
+  }
+  @media (max-width: 767px) {
+    .ytd-history-modal { padding: env(safe-area-inset-top, 0) 0 env(safe-area-inset-bottom, 0) 0; }
+    .ytd-history-card { width: 100vw; max-width: 100vw; height: 100vh; height: 100dvh; max-height: 100vh; max-height: 100dvh; border-radius: 0; }
+    .ytd-history-header { padding: var(--space-3) var(--space-4); gap: 8px; }
+    .ytd-history-title { font-size: var(--font-size-md); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ytd-history-close { min-width: 44px; min-height: 44px; }
+    .ytd-history-body { padding: var(--space-3) var(--space-4) max(var(--space-4), env(safe-area-inset-bottom, 16px)); }
+    .ytd-history-chart { height: 50vh; height: 50dvh; }
+    #qsHistoryChart { height: 50vh !important; height: 50dvh !important; }
+  }
+
+  /* ─── EMPTY STATE ─── */
+  .empty-state {
+    display: none; text-align: center; padding: var(--space-16) var(--space-6);
+  }
+  .empty-state.visible { display: block; }
+  .empty-icon { width: 64px; height: 64px; margin: 0 auto var(--space-5); color: var(--color-text-tertiary); }
+  .empty-title { font-size: var(--font-size-lg); font-weight: var(--font-weight-semibold); margin-bottom: var(--space-2); }
+  .empty-desc { font-size: var(--font-size-sm); color: var(--color-text-secondary); margin-bottom: var(--space-6); max-width: 400px; margin-left: auto; margin-right: auto; }
+
+  /* ─── LOADING STATE ─── */
+  .loading-overlay {
+    display: none; position: absolute; inset: 0; z-index: var(--z-overlay);
+    background: rgba(255,255,255,0.8); backdrop-filter: blur(4px);
+    align-items: center; justify-content: center; flex-direction: column; gap: var(--space-4);
+    border-radius: var(--radius-md);
+  }
+  [data-theme="dark"] .loading-overlay { background: rgba(0,0,0,0.7); }
+  .loading-overlay.visible { display: flex; }
+  .spinner {
+    width: 32px; height: 32px; border: 3px solid var(--color-bg-subtle);
+    border-top-color: var(--color-primary); border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text { font-size: var(--font-size-sm); color: var(--color-text-secondary); font-weight: var(--font-weight-medium); }
+  .progress-bar {
+    width: 200px; height: 4px; background: var(--color-bg-subtle);
+    border-radius: var(--radius-full); overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%; background: var(--color-primary); border-radius: var(--radius-full);
+    transition: width var(--duration-slow) var(--ease-out);
+    animation: progress-indeterminate 1.5s ease-in-out infinite;
+  }
+  @keyframes progress-indeterminate {
+    0% { width: 0%; margin-left: 0; }
+    50% { width: 60%; margin-left: 20%; }
+    100% { width: 0%; margin-left: 100%; }
+  }
+
+  /* ─── ERROR BANNER ─── */
+  .error-banner {
+    display: none; padding: var(--space-4) var(--space-5);
+    background: var(--color-error-subtle); border: 1px solid var(--color-error);
+    border-radius: var(--radius-md); margin-bottom: var(--space-5);
+    align-items: center; gap: var(--space-3);
+  }
+  .error-banner.visible { display: flex; }
+  .error-banner svg { width: 20px; height: 20px; color: var(--color-error); flex-shrink: 0; }
+  .error-message { flex: 1; }
+  .error-title { font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); color: var(--color-error); }
+  .error-desc { font-size: var(--font-size-xs); color: var(--color-text-secondary); }
+
+  /* ─── SKELETON LOADING ─── */
+  .skeleton-row {
+    display: flex; gap: var(--space-4); padding: var(--space-3) var(--space-4);
+    border-bottom: 1px solid var(--color-divider); align-items: center;
+  }
+  .skeleton-cell {
+    height: 14px; background: var(--color-bg-subtle); border-radius: var(--radius-sm);
+    animation: skeleton-pulse 1.5s ease-in-out infinite;
+  }
+  @keyframes skeleton-pulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 0.8; } }
+
+  /* ─── RESPONSIVE ─── */
+  @media (max-width: 767px) {
+    .page-header { flex-direction: column; align-items: flex-start; }
+    .controls-bar { align-items: center; justify-content: space-between; }
+    .controls-actions { margin-left: 0; }
+    .ranking-table { font-size: var(--font-size-xs); }
+    .ranking-table td, .ranking-table th { padding: var(--space-2) var(--space-3); }
+    .score-bar-track { width: 32px; }
+    /* Hide Rank and % from SMA columns on mobile */
+    .sma200-table th:nth-child(1),
+    .sma200-table td:nth-child(1),
+    .sma200-table th:nth-child(5),
+    .sma200-table td:nth-child(5) {
+      display: none;
+    }
+    .ytd-table th:nth-child(1),
+    .ytd-table td:nth-child(1),
+    .ytd-table th:nth-child(5),
+    .ytd-table td:nth-child(5) {
+      display: none;
+    }
+    /* Mobile: Ticker shrinks, Bar expands to fill space, Value stays compact */
+    .ytd-table .ticker-cell {
+      width: 1%;
+      white-space: nowrap;
+    }
+    .ytd-table .ytd-bar-cell {
+      width: auto;
+    }
+    .ytd-table .ytd-value-cell {
+      width: 1%;
+      white-space: nowrap;
+      padding-left: var(--space-2);
+    }
+    /* Hide Company column on mobile */
+    .earnings-table th:nth-child(2),
+    .earnings-table td:nth-child(2) { /* Company */
+      display: none;
+    }
+    /* Swing tables on mobile hide Last H/L/C; Trade hides 10:30 Close (Status stays) */
+    .ranking-panel.swing .ranking-table th:nth-child(5),
+    .ranking-panel.swing .ranking-table td:nth-child(5) { /* Last H/L/C */
+      display: none;
+    }
+    .ranking-panel.trade .ranking-table th:nth-child(4),
+    .ranking-panel.trade .ranking-table td:nth-child(4) { /* 10:30 Close */
+      display: none;
+    }
+    .ranking-panel.swing .ranking-table.earnings-table thead th,
+    .ranking-panel.swing .ranking-table.earnings-table thead th:first-child,
+    .ranking-panel.swing .ranking-table.earnings-table .ticker-cell,
+    .ranking-panel.swing .ranking-table.earnings-table .company-cell,
+    .ranking-panel.swing .ranking-table.earnings-table .date-cell,
+    .ranking-panel.swing .ranking-table.earnings-table .days-cell,
+    .ranking-panel.trade .ranking-table.earnings-table thead th,
+    .ranking-panel.trade .ranking-table.earnings-table thead th:first-child,
+    .ranking-panel.trade .ranking-table.earnings-table .ticker-cell,
+    .ranking-panel.trade .ranking-table.earnings-table .company-cell,
+    .ranking-panel.trade .ranking-table.earnings-table .date-cell,
+    .ranking-panel.trade .ranking-table.earnings-table .days-cell {
+      width: 33.3%;
+    }
+  }
+  @media (max-width: 480px) {
+    .ranking-table .trend-col { display: none; }
+    .ranking-table .trend-cell { display: none; }
+  }
+
+  /* ─── ANIMATIONS ─── */
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  .fade-in { animation: fadeIn var(--duration-normal) var(--ease-out); }
+  .fade-in-delay-1 { animation-delay: 60ms; animation-fill-mode: backwards; }
+  @keyframes scoreBarGrow { from { width: 0; } }
+  .score-bar-fill.animate { animation: scoreBarGrow var(--duration-slow) var(--ease-out); }
+
+  /* ─── QUALITY SCORE NA ROWS ─── */
+  .qs-na { opacity: 0.5; }
+  .qs-na .ytd-bar-track { background: var(--color-bg-tertiary, #e5e7eb); }
+  .qs-na .ytd-bar-fill { background: var(--color-text-tertiary, #9ca3af) !important; }
+
+  /* ─── QUALITY SCORE CHART BUTTON ─── */
+  .qs-chart-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 18px; height: 18px; margin-left: 4px;
+    border-radius: var(--radius-sm); cursor: pointer;
+    color: var(--color-text-tertiary); background: transparent;
+    border: none; padding: 0; transition: all var(--duration-fast) var(--ease-out);
+    flex-shrink: 0;
+  }
+  .qs-chart-btn:hover { color: var(--color-primary); background: var(--color-primary-subtle); }
+  .qs-chart-btn svg { width: 12px; height: 12px; }
+
+  /* ─── QUALITY SCORE MODAL (legacy alias — quality modal reuses .ytd-history-modal) ─── */
+  .qs-history-modal {
+    position: fixed; inset: 0; z-index: 1100;
+    display: none; align-items: center; justify-content: center;
+    padding: 60px 40px 40px;
+    background: rgba(0,0,0,0.5); backdrop-filter: blur(4px);
+  }
+  .qs-history-modal.open { display: flex; }
+  .qs-history-card {
+    background: var(--color-bg-elevated); border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3); width: calc(100% - 80px);
+    max-width: 900px; max-height: 80vh; display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+  .qs-history-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: var(--space-4) var(--space-6); border-bottom: 1px solid var(--color-divider);
+  }
+  .qs-history-title {
+    font-size: var(--font-size-lg); font-weight: var(--font-weight-bold);
+    color: var(--color-text-primary);
+  }
+  .qs-history-close {
+    display: flex; align-items: center; justify-content: center;
+    width: 32px; height: 32px; border-radius: var(--radius-sm);
+    border: none; background: transparent; color: var(--color-text-secondary);
+    cursor: pointer; transition: all var(--duration-fast) var(--ease-out);
+  }
+  .qs-history-close:hover { background: var(--color-bg-subtle); color: var(--color-text-primary); }
+  .qs-history-close svg { width: 16px; height: 16px; }
+  .qs-history-body { padding: var(--space-5); flex: 1; min-height: 0; overflow: hidden; }
+  .qs-history-chart { width: 100%; height: 300px; min-width: 0; position: relative; }
+  .qs-history-empty {
+    display: flex; align-items: center; justify-content: center;
+    height: 200px; color: var(--color-text-tertiary);
+    font-size: var(--font-size-sm);
+  }
+  @media (max-width: 767px) {
+    .qs-history-modal { padding: env(safe-area-inset-top, 0) 0 env(safe-area-inset-bottom, 0) 0; }
+    .qs-history-card { width: 100vw; max-width: 100vw; height: 100vh; height: 100dvh; max-height: 100vh; max-height: 100dvh; border-radius: 0; }
+  }
+
+  /* ─── REDUCED MOTION ─── */
+  @media (prefers-reduced-motion: reduce) {
+    .loading-overlay .progress-fill { animation: none; }
+    .score-bar-fill.animate { animation: none; }
+    .status-dot { animation: none; }
+  }
+
+  /* ─── MODAL BASE ─── */
+  .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: var(--z-modal); display: none; align-items: center; justify-content: center; opacity: 0; transition: opacity var(--duration-normal) var(--ease-out); }
+  .modal-backdrop.open { display: flex; opacity: 1; }
+  .modal-card { background: var(--color-bg-elevated); border-radius: var(--radius-lg); box-shadow: var(--shadow-xl); width: 100%; max-height: 90vh; overflow-y: auto; animation: modal-enter var(--duration-slow) var(--ease-spring); }
+  @keyframes modal-enter { from { opacity: 0; transform: translateY(16px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+  .modal-header { display: flex; align-items: center; justify-content: space-between; padding: var(--space-5) var(--space-6); border-bottom: 1px solid var(--color-divider); }
+  .modal-title { font-size: var(--font-size-lg); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); }
+  .modal-close { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-sm); color: var(--color-text-secondary); transition: background var(--duration-fast); }
+  .modal-close:hover { background: var(--color-bg-subtle); }
+  .modal-close svg { width: 18px; height: 18px; }
+  .modal-body { padding: var(--space-6); }
+  /* Safe vertical centering: identical when content fits; tall Live content
+     top-aligns and scrolls instead of sliding cut-off behind the top nav. */
+
+  /* ─── S/R PICKER ─── */
+
+  @media (max-width: 767px) {
+    .scanner-tab { min-height: 44px; }
+  }
+
+  /* Tokens live in css/styles.css (:root, global Terminal Precision) —
+     no per-screen pinning. */
+  /* Tabs: underline console (selected contract unchanged) */
+  .scanner-tab { background: none; border: none; border-bottom: 2px solid transparent; border-radius: 0; font-family: var(--font-mono); font-size: 12px; }
+  .scanner-tab:hover { color: var(--color-text-primary); }
+  .scanner-tab.active { background: none; border-color: var(--color-text-primary); color: var(--color-text-primary); font-weight: var(--font-weight-bold); }
+  .scanner-tab:active { transform: translate(1px, 1px); }
+  /* Panel accents: monochrome hairlines (kills gold/green/purple gradients) */
+  .ranking-panel.sma200 .panel-accent,
+  .ranking-panel.ytd .panel-accent,
+  .ranking-panel.quality-score .panel-accent { background: var(--color-text-primary); }
+  .ranking-panel.sma200 .panel-icon,
+  .ranking-panel.ytd .panel-icon,
+  .ranking-panel.quality-score .panel-icon { background: var(--color-bg-inset); border: 1px solid var(--color-divider); color: var(--color-text-secondary); }
+  .ranking-panel .panel-title, .ranking-panel .panel-subtitle { font-variant-numeric: tabular-nums; }
+  /* Tables (all three + earnings/ytd variants): dense console */
+  .ranking-table { font-size: 13px; }
+  .ranking-table thead th { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.1em; padding: var(--space-2) var(--space-3); background: var(--color-bg-inset); }
+  .ranking-table td { padding: var(--space-2) var(--space-3); font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; }
+  .ranking-table tbody tr:hover { background: var(--color-bg-inset); }
+  .ranking-panel.earnings .ranking-table.earnings-table thead th { font-family: var(--font-mono); }
+  .sma200-table .price-cell, .sma200-table .sma-cell, .sma200-table .pct-cell,
+  .ytd-table .ticker-cell, .score-value, .trend-cell, .days-cell { font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; }
+  .sma200-table .position-badge.above { background: var(--color-success-subtle); }
+  .sma200-table .position-badge.below { background: var(--color-error-subtle); }
+  .sma200-table .proximity-hot { background: var(--color-bg-inset); }
+  .ytd-bar-track { background: var(--color-bg-inset); border: 1px solid var(--color-divider); }
+  /* Pills + badges: mono chips */
+  .scan-schedule-badge, .days-pill, .trend-new, .position-badge { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.06em; border-radius: 4px; }
+  .earnings-table .days-pill.soon { color: var(--color-warning); }
+  .ytd-chart-btn:hover { color: var(--color-text-primary); background: var(--color-bg-inset); }
+  .ytd-chart-btn:active { transform: translate(1px, 1px); }
+  /* Cards + history modal: 6px radii */
+  .ytd-history-card { border-radius: var(--radius-md); }
+  /* Shared modal template: calm entrance, token canvas, mono tools */
+  .modal-card { animation: modal-enter var(--duration-normal) var(--ease-out); }
+  @keyframes modal-enter { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+  /* Trend Quality v2: all overrides are scoped to this feature. */
+  .quality-score .qs-table-wrap { overflow-x: auto; max-width: 100%; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .quality-score .qs-table-wrap::-webkit-scrollbar { display: none; }
+  .quality-score .qs-table { width: 100%; min-width: 0; }
+  .quality-score .qs-table th, .quality-score .qs-table td { text-align: left; }
+  .quality-score .qs-table thead th:nth-child(3),
+  .quality-score .qs-table thead th:nth-child(4) { text-align: left; }
+  .quality-score .qs-table .rank-cell { text-align: center; opacity: 1; color: var(--color-text-secondary); }
+  .quality-score .qs-table .qs-number { font-family: var(--font-mono); white-space: nowrap; }
+  .quality-score .qs-table small { display: block; font-size: 10px; }
+  .quality-score .qs-details-btn { text-align: left; cursor: pointer; min-width: 84px; color: var(--color-text-primary); background: none; border: none; padding: 0; }
+  .quality-score .qs-details-btn:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 3px; }
+  .quality-score .qs-details-btn strong { font-family: var(--font-mono); font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); line-height: 1.2; }
+  .quality-score progress { display: block; width: 100%; height: 5px; margin-top: 5px; accent-color: var(--color-primary); }
+  .quality-score .qs-result { cursor: pointer; }
+  .quality-score .qs-assessment, .quality-score .qs-exclusion { white-space: normal; max-width: 240px; line-height: 1.35; }
+  .quality-score .qs-excluded { color: var(--color-text-tertiary); }
+  .quality-score .qs-weekly { white-space: nowrap; display: flex; align-items: center; justify-content: flex-start; gap: 6px; }
+  .quality-score .qs-weekly .trend-up, .quality-score .qs-weekly .trend-down { display: inline-flex; align-items: center; gap: 3px; }
+  .quality-score .qs-weekly svg { width: 14px; height: 14px; flex-shrink: 0; }
+  .quality-score .qs-weekly .qs-chart-btn { min-width: 28px; min-height: 28px; }
+  .quality-score .qs-table td:last-child, .quality-score .qs-table th:last-child { padding-right: 12px; }
+  /* Signed values reuse the app-wide up/down convention (trade.js, earnings). */
+  .quality-score .qs-pos { color: var(--color-success); }
+  .quality-score .qs-neg { color: var(--color-error); }
+  /* Numeric columns right-align with their headers. */
+  .quality-score .qs-table th.qs-num, .quality-score .qs-table td.qs-number { text-align: right; }
+  .quality-score .qs-cons-strong { color: var(--color-success); font-weight: var(--font-weight-semibold); }
+  .quality-score .qs-cons-low { color: var(--color-warning); }
+  /* Assessment pills reuse the subtle-badge pattern (news-move-badge). */
+  .quality-score .qs-pill { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: var(--radius-full); font-size: 11px; font-weight: var(--font-weight-semibold); white-space: nowrap; line-height: 1.3; }
+  .quality-score .qs-pill-quality { background: var(--color-success-subtle); color: var(--color-success); }
+  .quality-score .qs-pill-stretched { background: var(--color-warning-subtle); color: var(--color-warning); }
+  .quality-score .qs-pill-emerging { background: var(--color-primary-subtle); color: var(--color-primary); }
+  .quality-score .qs-pill-deteriorating, .quality-score .qs-pill-weak { background: var(--color-error-subtle); color: var(--color-error); }
+  .quality-score .qs-pill-mixed { background: var(--color-bg-inset); color: var(--color-text-secondary); }
+  /* Client-side filter chips follow the scanner-tab active pattern. */
+  .quality-score .qs-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--color-divider); }
+  .quality-score .qs-filters:empty { display: none; }
+  .quality-score .qs-filter-label { font-size: 11px; color: var(--color-text-secondary); }
+  .quality-score .qs-chip { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; font-family: var(--font-mono); font-size: 11px; color: var(--color-text-secondary); background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-full); cursor: pointer; white-space: nowrap; }
+  .quality-score .qs-chip b { font-weight: var(--font-weight-semibold); }
+  .quality-score .qs-chip:hover { color: var(--color-text-primary); border-color: var(--color-text-tertiary); }
+  .quality-score .qs-chip[aria-pressed="true"] { background: var(--color-primary); border-color: var(--color-primary); color: var(--color-text-inverse); }
+  .quality-score .qs-chip-reset { border-style: dashed; }
+  .quality-score .qs-showing { margin-left: auto; font-family: var(--font-mono); font-size: 11px; color: var(--color-text-tertiary); }
+  /* Mobile filter disclosure (toggle hidden on desktop; options flow inline). */
+  .quality-score .qs-filter-toggle { display: none; }
+  .quality-score .qs-filter-options { display: contents; }
+  .quality-score .qs-status, .quality-score .qs-help, .quality-score .qs-error, .ranking-panel.swing .qs-status, .ranking-panel.trade .qs-status { padding: var(--space-3) var(--space-4); font-size: var(--font-size-xs); line-height: 1.5; }
+  .quality-score .qs-status, .ranking-panel.swing .qs-status, .ranking-panel.trade .qs-status { border-bottom: 1px solid var(--color-divider); color: var(--color-text-secondary); }
+  .quality-score .qs-help { border-top: 1px solid var(--color-divider); color: var(--color-text-secondary); }
+  .quality-score .qs-error, .quality-score .qs-warning { color: var(--color-warning); }
+  .quality-score .qs-muted { color: var(--color-text-tertiary); font-size: 10px; }
+  .quality-score .qs-empty { text-align: center; padding: var(--space-8); color: var(--color-text-secondary); }
+  .quality-score .qs-detail-row[hidden], .quality-score .qs-error[hidden] { display: none; }
+  .quality-score .qs-detail-content { padding: var(--space-3); white-space: normal; line-height: 1.6; }
+  .quality-score .qs-components { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--space-4); margin: var(--space-4) 0; }
+  .quality-score .qs-component strong { display: block; font-family: var(--font-mono); }
+  .quality-score .qs-metrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); margin: var(--space-4) 0; }
+  .quality-score .qs-metrics dt { color: var(--color-text-secondary); font-size: 11px; }
+  .quality-score .qs-metrics dd { margin: 0; font-family: var(--font-mono); overflow-wrap: anywhere; }
+  #quality-score-history-modal .qs-history-note { padding: 0 var(--space-4); color: var(--color-text-secondary); font-size: 11px; }
+  @media (min-width: 768px) {
+    /* Allocate desktop space to the data instead of leaving an oversized
+       Assessment-to-returns gap. Keep paired returns aligned as a unit. */
+    .quality-score .qs-table { table-layout: fixed; min-width: 1050px; }
+    .quality-score .qs-table thead th:nth-child(1) { width: 5%; }
+    .quality-score .qs-table thead th:nth-child(2) { width: 9%; }
+    .quality-score .qs-table thead th:nth-child(3) { width: 10%; }
+    .quality-score .qs-table thead th:nth-child(4) { width: 14%; }
+    .quality-score .qs-table thead th:nth-child(5) { width: 15%; }
+    .quality-score .qs-table thead th:nth-child(6) { width: 12%; }
+    .quality-score .qs-table thead th:nth-child(7) { width: 12%; }
+    .quality-score .qs-table thead th:nth-child(8) { width: 13%; }
+    .quality-score .qs-table thead th:nth-child(9) { width: 10%; }
+    .quality-score .qs-table th.qs-num:nth-child(5),
+    .quality-score .qs-table td.qs-number:nth-child(5) { text-align: left; }
+    .quality-score .qs-table-wrap { scrollbar-width: thin; }
+    .quality-score .qs-table-wrap::-webkit-scrollbar { display: block; height: 6px; }
+  }
+  @media (max-width: 767px) {
+    .ranking-table .ticker-cell { font-size: var(--font-size-sm); }
+    /* Grid only the four visible columns. Hidden desktop cells and detail colspan
+       must not participate in WebKit's table-width calculation. */
+    .quality-score .qs-table,
+    .quality-score .qs-table thead,
+    .quality-score .qs-table tbody { display: block; width: 100%; }
+    .quality-score .qs-table thead tr,
+    .quality-score .qs-table tbody tr.qs-result,
+    .quality-score .qs-table tbody tr.qs-excluded {
+      display: grid;
+      grid-template-columns: 28px 68px 84px minmax(0, 1fr);
+      align-items: center;
+      width: 100%;
+    }
+    .quality-score .qs-table thead tr { background: var(--color-bg-inset); }
+    .quality-score .qs-table tbody tr.qs-detail-row:not([hidden]),
+    .quality-score .qs-table tbody tr:not(.qs-result):not(.qs-excluded):not(.qs-detail-row) { display: block; width: 100%; }
+    .quality-score .qs-table tbody tr.qs-detail-row td,
+    .quality-score .qs-table tbody tr:not(.qs-result):not(.qs-excluded):not(.qs-detail-row) td { display: block; width: 100%; }
+    .quality-score .qs-table .qs-secondary { display: none; }
+    .quality-score .qs-table thead th:nth-child(9),
+    .quality-score .qs-table tbody td.qs-weekly { display: none; }
+    .quality-score .qs-table th, .quality-score .qs-table td { padding: 8px 5px; font-size: 11px; }
+    .quality-score .qs-table th, .quality-score .qs-table td { min-width: 0; }
+    .quality-score .qs-table th:first-child,
+    .quality-score .qs-table .rank-cell { width: auto; }
+    .quality-score .qs-table thead th:nth-child(4),
+    .quality-score .qs-table tbody tr:not(.qs-detail-row) td:nth-child(4) { padding-right: max(12px, env(safe-area-inset-right, 12px)); }
+    .quality-score .qs-details-btn { min-width: 0; min-height: 44px; }
+    .quality-score .qs-details-btn strong { font-size: var(--font-size-sm); }
+    .quality-score .qs-details-btn .qs-muted { display: inline; }
+    .quality-score .qs-assessment, .quality-score .qs-exclusion { max-width: none; }
+    .quality-score .qs-pill { font-size: 10px; padding: 2px 6px; white-space: nowrap; line-height: 1.3; }
+    .quality-score .qs-components, .quality-score .qs-metrics { grid-template-columns: 1fr; }
+    /* Filter disclosure: compact toggle + count; chips expand on demand. */
+    .quality-score .qs-filters { flex-direction: column; align-items: stretch; padding: 8px 5px; }
+    .quality-score .qs-filter-toggle { display: inline-flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; min-height: 44px; padding: 8px 12px; font-family: var(--font-mono); font-size: 12px; font-weight: var(--font-weight-semibold); color: var(--color-text-primary); background: var(--color-bg-inset); border: 1px solid var(--color-divider); border-radius: 8px; cursor: pointer; }
+    .quality-score .qs-filter-toggle:hover { border-color: var(--color-text-tertiary); }
+    .quality-score .qs-filter-toggle:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+    .quality-score .qs-filter-count { display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; padding: 0 6px; margin-left: 6px; border-radius: var(--radius-full); background: var(--color-primary); color: var(--color-text-inverse); font-size: 11px; vertical-align: baseline; }
+    .quality-score .qs-filter-count.is-zero { background: var(--color-bg-subtle); color: var(--color-text-tertiary); }
+    .quality-score .qs-chevron { transition: transform var(--duration-fast) var(--ease-out); color: var(--color-text-tertiary); }
+    .quality-score .qs-filters.open .qs-chevron { transform: rotate(180deg); }
+    .quality-score .qs-filter-options { display: none; flex-wrap: wrap; gap: 6px; padding-top: 8px; }
+    .quality-score .qs-filters.open .qs-filter-options { display: flex; }
+    .quality-score .qs-chip { min-height: 36px; }
+    .quality-score .qs-showing { flex-basis: auto; margin-left: 0; padding-top: 6px; }
+    /* Swing filter disclosure: same compact toggle as quality-score. */
+    .ranking-panel.swing .qs-filters, .ranking-panel.trade .qs-filters { flex-direction: column; align-items: stretch; padding: 8px 5px; }
+    .ranking-panel.swing .qs-filter-toggle, .ranking-panel.trade .qs-filter-toggle { display: inline-flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; min-height: 44px; padding: 8px 12px; font-family: var(--font-mono); font-size: 12px; font-weight: var(--font-weight-semibold); color: var(--color-text-primary); background: var(--color-bg-inset); border: 1px solid var(--color-divider); border-radius: 8px; cursor: pointer; }
+    .ranking-panel.swing .qs-filter-toggle:hover, .ranking-panel.trade .qs-filter-toggle:hover { border-color: var(--color-text-tertiary); }
+    .ranking-panel.swing .qs-filter-toggle:focus-visible, .ranking-panel.trade .qs-filter-toggle:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+    .ranking-panel.swing .qs-filter-count, .ranking-panel.trade .qs-filter-count { display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; padding: 0 6px; margin-left: 6px; border-radius: var(--radius-full); background: var(--color-primary); color: var(--color-text-inverse); font-size: 11px; vertical-align: baseline; }
+    .ranking-panel.swing .qs-filter-count.is-zero, .ranking-panel.trade .qs-filter-count.is-zero { background: var(--color-bg-subtle); color: var(--color-text-tertiary); }
+    .ranking-panel.swing .qs-chevron, .ranking-panel.trade .qs-chevron { transition: transform var(--duration-fast) var(--ease-out); color: var(--color-text-tertiary); }
+    .ranking-panel.swing .qs-filters.open .qs-chevron, .ranking-panel.trade .qs-filters.open .qs-chevron { transform: rotate(180deg); }
+    .ranking-panel.swing .qs-filter-options, .ranking-panel.trade .qs-filter-options { display: none; flex-wrap: wrap; gap: 6px; padding-top: 8px; }
+    .ranking-panel.swing .qs-filters.open .qs-filter-options, .ranking-panel.trade .qs-filters.open .qs-filter-options { display: flex; }
+    .ranking-panel.swing .qs-chip, .ranking-panel.trade .qs-chip { min-height: 36px; }
+    .ranking-panel.swing .qs-showing, .ranking-panel.trade .qs-showing { flex-basis: auto; margin-left: 0; padding-top: 6px; }
+  }
+
+  /* ETF holdings: compact mobile board with two independently labelled trends. */
+  .ranking-panel.etf-holdings .panel-accent { background: var(--color-text-primary); }
+  .etf-filter { display: flex; align-items: center; gap: 10px; padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--color-divider); font-size: 12px; color: var(--color-text-secondary); }
+  .etf-filter select { min-height: 36px; padding: 4px 10px; border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-bg-elevated); color: var(--color-text-primary); font-family: var(--font-mono); }
+  /* Desktop: pill selector follows the qs-chip theme; mobile keeps the dropdown. */
+  .etf-pills { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+  .etf-pill { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; font-family: var(--font-mono); font-size: 11px; color: var(--color-text-secondary); background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-full); cursor: pointer; white-space: nowrap; }
+  .etf-pill:hover { color: var(--color-text-primary); border-color: var(--color-text-tertiary); }
+  .etf-pill[aria-pressed="true"] { background: var(--color-primary); border-color: var(--color-primary); color: var(--color-text-inverse); }
+  .etf-pill:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+  .etf-select-wrap { display: none; align-items: center; gap: 10px; }
+  @media (max-width: 767px) {
+    .etf-pills { display: none; }
+    .etf-select-wrap { display: inline-flex; }
+  }
+  .etf-status { padding: var(--space-2) var(--space-4); border-bottom: 1px solid var(--color-divider); color: var(--color-text-secondary); font-family: var(--font-mono); font-size: 11px; }
+  .etf-table { table-layout: fixed; }
+  .etf-table thead th:first-child { width: 6%; }
+  .etf-table th:nth-child(2) { width: 34%; }
+  .etf-table th:nth-child(3) { width: 12%; }
+  .etf-table th:nth-child(4) { width: 14%; }
+  .etf-table th:nth-child(5) { width: 20%; }
+  .etf-table th:nth-child(6) { width: 14%; text-align: right; }
+  .etf-table thead th:nth-child(3) { text-align: left; }
+  .etf-table td, .etf-table th { overflow: hidden; text-overflow: ellipsis; }
+  .etf-table td.etf-weight, .etf-table td.etf-shares, .etf-table td.etf-change-cell { text-align: right; font-family: var(--font-mono); }
+  .etf-table td.etf-change-cell { white-space: nowrap; }
+  .etf-up { color: var(--color-success); }
+  .etf-down { color: var(--color-error); }
+  .etf-flat { color: var(--color-text-tertiary); }
+  .etf-history-btn { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; margin-left: 6px; vertical-align: middle; border-radius: var(--radius-sm); color: var(--color-text-secondary); cursor: pointer; }
+  .etf-history-btn:hover, .etf-history-btn:focus-visible { color: var(--color-text-primary); background: var(--color-bg-inset); }
+  .etf-history-btn svg { width: 14px; height: 14px; }
+  @media (max-width: 767px) {
+    .etf-table th:nth-child(2), .etf-table td:nth-child(2),
+    .etf-table th:nth-child(4), .etf-table td:nth-child(4) { display: none; }
+    .etf-table thead th:first-child { width: 8%; }
+    .etf-table th:nth-child(3) { width: 21%; }
+    .etf-table th:nth-child(5) { width: 40%; }
+    .etf-table th:nth-child(6) { width: 31%; }
+    .etf-table td, .etf-table th { padding: 8px 4px; font-size: 11px; }
+    .etf-table .ticker-cell { font-size: 12px; }
+    .etf-table .etf-history-btn { margin-left: 2px; }
+  }
+</style>
+
+<div class="scanner-screen">
+
+  <!-- ═══════════════════════════════════════════════════════════
+       PAGE HEADER
+       ═══════════════════════════════════════════════════════════ -->
+  <header class="page-header">
+    <div class="page-title-group">
+      <h1 class="page-title">Stock Scanner</h1>
+      <span class="scan-schedule-badge" title="Auto-scan runs at 4:15 PM ET on weekdays">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        Auto-scan 4:15 PM ET
+      </span>
+    </div>
+    <div class="page-meta">
+      <span class="status-dot" aria-hidden="true" id="statusDot"></span>
+      <span id="lastScanText">Last scan: Never</span>
+    </div>
+  </header>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       ERROR BANNER
+       ═══════════════════════════════════════════════════════════ -->
+  <div class="error-banner" id="errorBanner" role="alert">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    <div class="error-message">
+      <div class="error-title" id="errorTitle">Scan failed</div>
+      <div class="error-desc" id="errorDesc">An error occurred while running the scan.</div>
+    </div>
+    <button class="btn btn-primary" id="retryBtn" style="background: var(--color-error); box-shadow: none;">Retry</button>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       SCANNER CONTROLS BAR
+       ═══════════════════════════════════════════════════════════ -->
+  <div class="controls-bar" role="toolbar" aria-label="Scanner controls">
+    <div class="controls-status">
+      <span class="universe-label">
+        <span class="universe-label-text">Stock Universe:</span>
+        <span class="universe-count" id="universeCount">--</span>
+      </span>
+    </div>
+    <div class="controls-actions">
+      <button class="btn btn-primary" id="runScanBtn" aria-label="Run scan">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        <span id="scanBtnText">Run Scan</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       TAB BAR — pill-style navigation between panels
+       ═══════════════════════════════════════════════════════════ -->
+  <div class="scanner-tabs" id="scannerTabs" role="tablist" aria-label="Scanner panels">
+    <button class="scanner-tab active" role="tab" data-panel="momentum" aria-selected="true">Momentum</button>
+    <button class="scanner-tab" role="tab" data-panel="reversal" aria-selected="false">Reversal</button>
+    <button class="scanner-tab" role="tab" data-panel="sma200" aria-selected="false">200 SMA</button>
+    <button class="scanner-tab" role="tab" data-panel="ytd" aria-selected="false">YTD Return</button>
+    <button class="scanner-tab" role="tab" data-panel="earnings" aria-selected="false">Earnings</button>
+    <button class="scanner-tab" role="tab" data-panel="quality-score" aria-selected="false">Quality Score</button>
+    <button class="scanner-tab" role="tab" data-panel="swing" aria-selected="false">Swing</button>
+    <button class="scanner-tab" role="tab" data-panel="trade" aria-selected="false">Trade</button>
+    <button class="scanner-tab" role="tab" data-panel="etf-holdings" aria-selected="false">ETF Holdings</button>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       RANKING BOARD — 2 COLUMNS
+       ═══════════════════════════════════════════════════════════ -->
+  <div class="ranking-board" id="rankingBoard">
+
+    <!-- LEFT COLUMN: MOMENTUM RANKING -->
+    <section class="ranking-panel momentum fade-in" aria-label="Momentum ranking board">
+      <div class="panel-accent" aria-hidden="true"></div>
+      <div class="panel-header">
+        <div class="panel-title-group">
+          <div class="panel-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+          </div>
+          <div>
+            <div class="panel-title">Momentum</div>
+            <div class="panel-subtitle">Strongest uptrend signals</div>
+          </div>
+        </div>
+        <span class="panel-count" id="momentumCount">0 stocks</span>
+      </div>
+      <div style="position: relative;">
+        <div class="loading-overlay" id="momentumLoading">
+          <div class="spinner"></div>
+          <div class="loading-text">Scanning momentum...</div>
+          <div class="progress-bar" aria-hidden="true"><div class="progress-fill"></div></div>
+        </div>
+        <table class="ranking-table" role="grid" aria-label="Momentum stock rankings">
+          <thead>
+            <tr>
+              <th scope="col" aria-label="Rank">#</th>
+              <th scope="col">Ticker</th>
+              <th scope="col">Score</th>
+              <th scope="col">Qualified Streak</th>
+              <th scope="col" class="trend-col">Trend</th>
+            </tr>
+          </thead>
+          <tbody id="momentumBody">
+            <!-- Populated by JS -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="ranking-panel etf-holdings fade-in" aria-label="ETF holdings ranking board">
+      <div class="panel-accent" aria-hidden="true"></div>
+      <div class="panel-header">
+        <div class="panel-title-group">
+          <div>
+            <div class="panel-title">ETF Holdings</div>
+            <div class="panel-subtitle">Top 15 holdings by published portfolio weight</div>
+          </div>
+        </div>
+        <span class="panel-count" id="etfHoldingsCount">0 holdings</span>
+      </div>
+      <div class="etf-filter">
+        <span class="etf-filter-label" aria-hidden="true">ETF</span>
+        <div class="etf-pills" id="etfHoldingsPills" role="group" aria-label="Select ETF"></div>
+        <span class="etf-select-wrap">
+          <label for="etfHoldingsSelect">ETF</label>
+          <select id="etfHoldingsSelect" aria-label="Select ETF">
+            <option value="XDIV.TO">XDIV.TO</option>
+            <option value="SPY">SPY</option>
+            <option value="QQQ">QQQ</option>
+            <option value="SOXX">SOXX</option>
+            <option value="ARKK">ARKK</option>
+            <option value="DYNF">DYNF</option>
+            <option value="DIVO">DIVO</option>
+          </select>
+        </span>
+      </div>
+      <div class="etf-status" id="etfHoldingsStatus" aria-live="polite">Loading holdings…</div>
+      <table class="ranking-table etf-table" aria-label="ETF holdings">
+        <thead><tr>
+          <th scope="col">#</th><th scope="col">Holding</th><th scope="col">Ticker</th>
+          <th scope="col">Weight</th><th scope="col">Shares held</th>
+          <th scope="col" title="Rank movement by portfolio weight">Rank move</th>
+        </tr></thead>
+        <tbody id="etfHoldingsBody"></tbody>
+      </table>
+    </section>
+
+    <!-- RIGHT COLUMN: REVERSAL + SMA200 -->
+    <div class="right-column">
+      <section class="ranking-panel reversal fade-in fade-in-delay-1" aria-label="Reversal ranking board">
+        <div class="panel-accent" aria-hidden="true"></div>
+        <div class="panel-header">
+          <div class="panel-title-group">
+            <div class="panel-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>
+            </div>
+            <div>
+              <div class="panel-title">Reversal</div>
+              <div class="panel-subtitle">Bounce candidates</div>
+            </div>
+          </div>
+          <span class="panel-count" id="reversalCount">0 stocks</span>
+        </div>
+        <div style="position: relative;">
+          <div class="loading-overlay" id="reversalLoading">
+            <div class="spinner"></div>
+            <div class="loading-text">Scanning reversals...</div>
+            <div class="progress-bar" aria-hidden="true"><div class="progress-fill"></div></div>
+          </div>
+          <table class="ranking-table" role="grid" aria-label="Reversal stock rankings">
+            <thead>
+              <tr>
+                <th scope="col" aria-label="Rank">#</th>
+                <th scope="col">Ticker</th>
+                <th scope="col">Score</th>
+                <th scope="col">Qualified Streak</th>
+                <th scope="col" class="trend-col">Trend</th>
+              </tr>
+            </thead>
+            <tbody id="reversalBody">
+              <!-- Populated by JS -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 200 SMA PROXIMITY (below reversal) -->
+      <section class="ranking-panel sma200 fade-in fade-in-delay-2" aria-label="200 SMA proximity board">
+        <div class="panel-accent" aria-hidden="true"></div>
+        <div class="panel-header">
+          <div class="panel-title-group">
+            <div class="panel-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 3v18h18"/>
+                <path d="M7 16l4-8 4 4 4-6"/>
+              </svg>
+            </div>
+            <div>
+              <div class="panel-title">200 SMA Proximity</div>
+              <div class="panel-subtitle">Stocks near 200-day moving average</div>
+            </div>
+          </div>
+          <span class="panel-count" id="sma200Count">0 stocks</span>
+        </div>
+        <div style="position: relative;">
+          <div class="loading-overlay" id="sma200Loading">
+            <div class="spinner"></div>
+            <div class="loading-text">Scanning 200 SMA proximity...</div>
+            <div class="progress-bar" aria-hidden="true"><div class="progress-fill"></div></div>
+          </div>
+          <table class="ranking-table sma200-table" role="grid" aria-label="200 SMA proximity rankings">
+            <thead>
+              <tr>
+                <th scope="col" aria-label="Rank">#</th>
+                <th scope="col">Ticker</th>
+                <th scope="col">Price</th>
+                <th scope="col">SMA 200</th>
+                <th scope="col">% from SMA</th>
+                <th scope="col">Position</th>
+              </tr>
+            </thead>
+            <tbody id="sma200Body">
+              <!-- Populated by JS -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- YTD RETURN RANKING (below 200 SMA) -->
+      <section class="ranking-panel ytd fade-in fade-in-delay-3" aria-label="YTD return rankings">
+        <div class="panel-accent" aria-hidden="true"></div>
+        <div class="panel-header">
+          <div class="panel-title-group">
+            <div class="panel-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 3v18h18"/>
+                <path d="M7 16l4-8 4 4 4-6"/>
+              </svg>
+            </div>
+            <div>
+              <div class="panel-title">YTD Return</div>
+              <div class="panel-subtitle">Year-to-date performance ranking</div>
+            </div>
+          </div>
+          <span class="panel-count" id="ytdCount">0 stocks</span>
+        </div>
+        <div style="position: relative;">
+          <div class="loading-overlay" id="ytdLoading">
+            <div class="spinner"></div>
+            <div class="loading-text">Scanning YTD returns...</div>
+            <div class="progress-bar" aria-hidden="true"><div class="progress-fill"></div></div>
+          </div>
+          <table class="ranking-table ytd-table" role="grid" aria-label="YTD return rankings">
+            <thead>
+              <tr>
+                <th scope="col" aria-label="Rank">#</th>
+                <th scope="col">Ticker</th>
+                <th scope="col">YTD Return</th>
+                <th scope="col">Value</th>
+                <th scope="col" class="trend-col">Trend</th>
+              </tr>
+            </thead>
+            <tbody id="ytdBody">
+              <!-- Populated by JS -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- QUALITY SCORE RANKING (below YTD) -->
+      <section class="ranking-panel quality-score fade-in" aria-label="Quality score rankings">
+        <div class="panel-accent" aria-hidden="true"></div>
+        <div class="panel-header">
+          <div class="panel-title-group">
+            <div class="panel-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+              </svg>
+            </div>
+            <div>
+              <div class="panel-title">Trend Quality &amp; Momentum</div>
+              <div class="panel-subtitle">Daily candle evidence · Absolute score out of 100</div>
+            </div>
+          </div>
+          <span class="panel-count" id="qualityScoreCount">0 stocks</span>
+        </div>
+        <div class="qs-status" id="qualityScoreStatus" aria-live="polite">Weekly: Friday 7:35 PM ET · Model v2</div>
+        <div class="qs-error" id="qualityScoreError" role="alert" hidden></div>
+        <div class="qs-filters" id="qualityScoreFilters" aria-label="Filter trend quality rankings"></div>
+        <div style="position: relative;">
+          <div class="loading-overlay" id="qualityScoreLoading">
+            <div class="spinner"></div>
+            <div class="loading-text">Scanning quality scores...</div>
+            <div class="progress-bar" aria-hidden="true"><div class="progress-fill"></div></div>
+          </div>
+          <div class="qs-table-wrap">
+          <table class="ranking-table qs-table" aria-label="Trend quality rankings">
+            <thead>
+              <tr>
+                <th scope="col" aria-label="Rank">#</th>
+                <th scope="col">Ticker</th>
+                <th scope="col">Score</th>
+                <th scope="col">Assessment</th>
+                <th scope="col" class="qs-secondary qs-num">3M / 6M return</th>
+                <th scope="col" class="qs-secondary">Consistency</th>
+                <th scope="col" class="qs-secondary qs-num">6M max DD</th>
+                <th scope="col" class="qs-secondary qs-num">6M vs market</th>
+                <th scope="col">Weekly rank</th>
+              </tr>
+            </thead>
+            <tbody id="qualityScoreBody"></tbody>
+          </table>
+          </div>
+        </div>
+        <p class="qs-help">Select a score for its breakdown; ticker links open price charts. Rank arrows show moves of 5+ places versus the last scan from an earlier week. Provisional scores exclude unavailable benchmark evidence. This measures price-trend quality, not business fundamentals.</p>
+      </section>
+
+      <!-- SWING (VAH/VAL TOUCH) PANEL -->
+      <section class="ranking-panel swing fade-in" aria-label="Swing VAH VAL touches">
+        <div class="panel-accent" aria-hidden="true"></div>
+
+        <!-- VAH touches -->
+        <div class="panel-header">
+          <div class="panel-title-group">
+            <div class="panel-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17l6-6 4 4 8-8"/><polyline points="15 7 21 7 21 13"/></svg>
+            </div>
+            <div>
+              <div class="panel-title">VAH Touch</div>
+              <div class="panel-subtitle">Today's high reached 3m / 6m value-area high</div>
+            </div>
+          </div>
+          <span class="panel-count" id="swingVahCount">0 stocks</span>
+        </div>
+        <div class="qs-status" id="swingStatus" aria-live="polite">Fresh daily after 4:30 PM ET · 3m + 6m levels</div>
+        <div class="qs-filters" id="swingVahFilters" aria-label="Filter VAH touches"></div>
+        <div style="position: relative;">
+          <div class="loading-overlay" id="swingVahLoading">
+            <div class="spinner"></div>
+            <div class="loading-text">Loading Swing touches...</div>
+            <div class="progress-bar" aria-hidden="true"><div class="progress-fill"></div></div>
+          </div>
+          <table class="ranking-table earnings-table" role="grid" aria-label="VAH touches">
+            <thead>
+              <tr>
+                <th scope="col">Ticker</th>
+                <th scope="col" class="company-col">Company</th>
+                <th scope="col">VAH</th>
+                <th scope="col">Signal</th>
+                <th scope="col">Last H / L / C</th>
+              </tr>
+            </thead>
+            <tbody id="swingVahBody"></tbody>
+          </table>
+        </div>
+
+        <!-- Panel Divider -->
+        <div class="panel-divider"></div>
+
+        <!-- VAL touches -->
+        <div class="panel-header">
+          <div class="panel-title-group">
+            <div class="panel-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7l6 6 4-4 8 8"/><polyline points="15 17 21 17 21 11"/></svg>
+            </div>
+            <div>
+              <div class="panel-title">VAL Touch</div>
+              <div class="panel-subtitle">Today's low reached 3m / 6m value-area low</div>
+            </div>
+          </div>
+          <span class="panel-count" id="swingValCount">0 stocks</span>
+        </div>
+        <div class="qs-filters" id="swingValFilters" aria-label="Filter VAL touches"></div>
+        <div style="position: relative;">
+          <div class="loading-overlay" id="swingValLoading">
+            <div class="spinner"></div>
+            <div class="loading-text">Loading VAL touches...</div>
+            <div class="progress-bar" aria-hidden="true"><div class="progress-fill"></div></div>
+          </div>
+          <table class="ranking-table earnings-table" role="grid" aria-label="VAL touches">
+            <thead>
+              <tr>
+                <th scope="col">Ticker</th>
+                <th scope="col" class="company-col">Company</th>
+                <th scope="col">VAL</th>
+                <th scope="col">Signal</th>
+                <th scope="col">Last H / L / C</th>
+              </tr>
+            </thead>
+            <tbody id="swingValBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- TRADE (ORB BREAKOUT) PANEL -->
+      <section class="ranking-panel trade fade-in" aria-label="ORB breakout board">
+        <div class="panel-accent" aria-hidden="true"></div>
+
+        <!-- Long breakouts -->
+        <div class="panel-header">
+          <div class="panel-title-group">
+            <div class="panel-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17l6-6 4 4 8-8"/><polyline points="15 7 21 7 21 13"/></svg>
+            </div>
+            <div>
+              <div class="panel-title">ORB Long</div>
+              <div class="panel-subtitle">10:15–10:30 close above 09:30–09:45 high</div>
+            </div>
+          </div>
+          <span class="panel-count" id="tradeLongCount">0 stocks</span>
+        </div>
+        <div class="qs-status" id="tradeStatus" aria-live="polite">Fresh daily after 10:45 AM ET · ORB 9:30–9:45 + 10:15–10:30 close</div>
+        <div class="qs-filters" id="tradeLongFilters" aria-label="Filter ORB longs"></div>
+        <div style="position: relative;">
+          <div class="loading-overlay" id="tradeLongLoading">
+            <div class="spinner"></div>
+            <div class="loading-text">Loading ORB breakouts...</div>
+            <div class="progress-bar" aria-hidden="true"><div class="progress-fill"></div></div>
+          </div>
+          <table class="ranking-table earnings-table" role="grid" aria-label="ORB long breakouts">
+            <thead>
+              <tr>
+                <th scope="col">Ticker</th>
+                <th scope="col" class="company-col">Company</th>
+                <th scope="col">ORBH</th>
+                <th scope="col">10:30 Close</th>
+                <th scope="col">Status</th>
+              </tr>
+            </thead>
+            <tbody id="tradeLongBody"></tbody>
+          </table>
+        </div>
+
+        <!-- Panel Divider -->
+        <div class="panel-divider"></div>
+
+        <!-- Short breakdowns -->
+        <div class="panel-header">
+          <div class="panel-title-group">
+            <div class="panel-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7l6 6 4-4 8 8"/><polyline points="15 17 21 17 21 11"/></svg>
+            </div>
+            <div>
+              <div class="panel-title">ORB Short</div>
+              <div class="panel-subtitle">10:15–10:30 close below 09:30–09:45 low</div>
+            </div>
+          </div>
+          <span class="panel-count" id="tradeShortCount">0 stocks</span>
+        </div>
+        <div class="qs-filters" id="tradeShortFilters" aria-label="Filter ORB shorts"></div>
+        <div style="position: relative;">
+          <div class="loading-overlay" id="tradeShortLoading">
+            <div class="spinner"></div>
+            <div class="loading-text">Loading ORB breakdowns...</div>
+            <div class="progress-bar" aria-hidden="true"><div class="progress-fill"></div></div>
+          </div>
+          <table class="ranking-table earnings-table" role="grid" aria-label="ORB short breakdowns">
+            <thead>
+              <tr>
+                <th scope="col">Ticker</th>
+                <th scope="col" class="company-col">Company</th>
+                <th scope="col">ORBL</th>
+                <th scope="col">10:30 Close</th>
+                <th scope="col">Status</th>
+              </tr>
+            </thead>
+            <tbody id="tradeShortBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+    <!-- EARNINGS PANEL -->
+    <section class="ranking-panel earnings fade-in" aria-label="Earnings calendar">
+      <div class="panel-accent" aria-hidden="true"></div>
+      
+      <!-- Earnings Today -->
+      <div class="panel-header">
+        <div class="panel-title-group">
+          <div class="panel-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+              <line x1="16" y1="2" x2="16" y2="6"/>
+              <line x1="8" y1="2" x2="8" y2="6"/>
+              <line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+          </div>
+          <div>
+            <div class="panel-title">Earnings Today</div>
+            <div class="panel-subtitle">Stocks reporting today</div>
+          </div>
+        </div>
+        <span class="panel-count" id="earningsTodayCount">0 stocks</span>
+      </div>
+      <div style="position: relative;">
+        <div class="loading-overlay" id="earningsTodayLoading">
+          <div class="spinner"></div>
+          <div class="loading-text">Loading earnings...</div>
+          <div class="progress-bar" aria-hidden="true"><div class="progress-fill"></div></div>
+        </div>
+        <table class="ranking-table earnings-table" role="grid" aria-label="Earnings today">
+          <thead>
+            <tr>
+              <th scope="col">Ticker</th>
+              <th scope="col" class="company-col">Company</th>
+              <th scope="col">Earnings Date</th>
+              <th scope="col">Days to Earnings</th>
+            </tr>
+          </thead>
+          <tbody id="earningsTodayBody"></tbody>
+        </table>
+      </div>
+
+      <!-- Panel Divider -->
+      <div class="panel-divider"></div>
+
+      <!-- Upcoming Earnings -->
+      <div class="panel-header">
+        <div class="panel-title-group">
+          <div class="panel-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+              <line x1="16" y1="2" x2="16" y2="6"/>
+              <line x1="8" y1="2" x2="8" y2="6"/>
+              <line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+          </div>
+          <div>
+            <div class="panel-title">Upcoming Earnings</div>
+            <div class="panel-subtitle">Next 10 trading days</div>
+          </div>
+        </div>
+        <span class="panel-count" id="earningsWeekCount">0 stocks</span>
+      </div>
+      <div style="position: relative;">
+        <div class="loading-overlay" id="earningsWeekLoading">
+          <div class="spinner"></div>
+          <div class="loading-text">Loading upcoming earnings...</div>
+          <div class="progress-bar" aria-hidden="true"><div class="progress-fill"></div></div>
+        </div>
+        <table class="ranking-table earnings-table" role="grid" aria-label="Upcoming earnings">
+          <thead>
+            <tr>
+              <th scope="col">Ticker</th>
+              <th scope="col" class="company-col">Company</th>
+              <th scope="col">Earnings Date</th>
+              <th scope="col">Days to Earnings</th>
+            </tr>
+          </thead>
+          <tbody id="earningsWeekBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+  </div><!-- /ranking-board -->
+
+  <!-- ═══════════════════════════════════════════════════════════
+       EMPTY STATE
+       ═══════════════════════════════════════════════════════════ -->
+  <div class="empty-state" id="emptyState">
+    <div class="empty-icon">
+      <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <circle cx="32" cy="32" r="28"/>
+        <path d="M32 4a28 28 0 0128 28"/>
+        <circle cx="32" cy="32" r="8"/>
+        <line x1="32" y1="4" x2="32" y2="12"/>
+        <line x1="32" y1="52" x2="32" y2="60"/>
+        <line x1="4" y1="32" x2="12" y2="32"/>
+        <line x1="52" y1="32" x2="60" y2="32"/>
+        <circle cx="32" cy="32" r="18" stroke-dasharray="4 4"/>
+      </svg>
+    </div>
+    <h3 class="empty-title">No scan results yet</h3>
+    <p class="empty-desc">Run a scan to populate the Momentum and Reversal ranking boards. Scans also run automatically at 4:15 PM ET.</p>
+    <button class="btn btn-primary" id="emptyScanBtn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+      Run First Scan
+    </button>
+  </div>
+
+</div>
+
+
+
+
+<!-- YTD HISTORY MODAL -->
+<div class="ytd-history-modal" id="ytd-history-modal" role="dialog" aria-modal="true" aria-label="YTD return history">
+  <div class="ytd-history-card">
+    <div class="ytd-history-header">
+      <h2 class="ytd-history-title" id="ytd-history-title">AAPL — YTD Return History</h2>
+      <button class="ytd-history-close" id="ytd-history-close" aria-label="Close">
+        <svg viewBox="0 0 18 18" fill="none"><path d="M4 4l10 10M14 4L4 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="ytd-history-body">
+      <div class="ytd-history-chart" id="ytd-history-chart"></div>
+      <div class="ytd-history-empty" id="ytd-history-empty" style="display:none;">No snapshot data available yet. Data builds daily after market close.</div>
+    </div>
+  </div>
+</div>
+
+<!-- QUALITY SCORE HISTORY MODAL -->
+<div class="ytd-history-modal" id="quality-score-history-modal" role="dialog" aria-modal="true" aria-label="Quality score history">
+  <div class="ytd-history-card">
+    <div class="ytd-history-header">
+      <h2 class="ytd-history-title" id="qsHistoryTitle">Trend Quality v2 History</h2>
+      <button class="ytd-history-close" id="closeQsHistoryModal" aria-label="Close">
+        <svg viewBox="0 0 18 18" fill="none"><path d="M4 4l10 10M14 4L4 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <p class="qs-history-note">0–100 model v2 · Last successful observation each week · Gaps are unscored weeks. Legacy ratio scores are stored separately.</p>
+    <div class="ytd-history-body">
+      <div id="qsHistoryChart" style="width:100%;height:300px;" aria-live="polite"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ETF SHARES HELD HISTORY MODAL -->
+<div class="ytd-history-modal" id="etf-history-modal" role="dialog" aria-modal="true" aria-label="ETF shares held history">
+  <div class="ytd-history-card">
+    <div class="ytd-history-header">
+      <h2 class="ytd-history-title" id="etf-history-title">Shares Held History</h2>
+      <button class="ytd-history-close" id="etf-history-close" aria-label="Close shares held history">
+        <svg viewBox="0 0 18 18" fill="none"><path d="M4 4l10 10M14 4L4 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="ytd-history-body">
+      <div class="ytd-history-chart" id="etf-history-chart" aria-live="polite"></div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,338 @@
+<!-- Earnings Watchlist. Expanded charts use the shared app-level component. -->
+
+<style>
+  /* ── Dashboard Layout ── */
+  .dash { padding: 0; max-width: 1440px; margin: 0 auto; }
+  .hidden { display: none !important; }
+
+  /* ── Page Header ── */
+  .page-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: var(--space-6); gap: var(--space-4); flex-wrap: wrap; }
+  .page-header-left { display: flex; align-items: center; gap: var(--space-4); }
+  .logo-mark { width: 40px; height: 40px; border-radius: var(--radius-md); background: linear-gradient(135deg, var(--color-success) 0%, #7ec43a 100%); display: flex; align-items: center; justify-content: center; font-size: 18px; color: var(--color-text-inverse); font-weight: var(--font-weight-bold); box-shadow: var(--shadow-sm); flex-shrink: 0; }
+  .header-titles { display: flex; flex-direction: column; gap: 2px; }
+  .header-title { font-size: var(--font-size-xl); font-weight: var(--font-weight-bold); color: var(--color-text-primary); letter-spacing: -0.3px; }
+  .header-subtitle { font-size: var(--font-size-xs); color: var(--color-text-tertiary); }
+  .live-pill { display: inline-flex; align-items: center; gap: 6px; background: var(--color-success-subtle); color: var(--color-success); font-size: var(--font-size-xs); font-weight: var(--font-weight-semibold); padding: 4px 10px; border-radius: var(--radius-full); border: 1px solid rgba(52,199,89,0.2); }
+  .pulse-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--color-success); animation: blink 2s infinite; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+  .page-header-right { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
+
+  /* ── Buttons ── */
+  .btn { display: inline-flex; align-items: center; gap: var(--space-2); padding: 7px 13px; border-radius: var(--radius-sm); font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); border: 1px solid var(--color-border); background: var(--color-bg-elevated); color: var(--color-text-secondary); transition: all var(--duration-fast) var(--ease-out); white-space: nowrap; cursor: pointer; }
+  .btn:hover { background: var(--color-bg-subtle); color: var(--color-text-primary); }
+  .btn.active { background: var(--color-text-primary); color: var(--color-bg); border-color: var(--color-text-primary); }
+  .btn-refresh { display: inline-flex; align-items: center; gap: var(--space-2); padding: 8px 16px; border-radius: var(--radius-sm); font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); border: 1.5px solid var(--color-success); background: var(--color-success-subtle); color: var(--color-success); transition: all var(--duration-fast) var(--ease-out); white-space: nowrap; box-shadow: var(--shadow-sm); cursor: pointer; }
+  .btn-refresh:hover:not(:disabled) { background: var(--color-success); color: var(--color-text-inverse); box-shadow: var(--shadow-md); transform: translateY(-1px); }
+  .btn-refresh:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
+  .btn-refresh.loading .refresh-icon { animation: spin 0.8s linear infinite; }
+  @keyframes spin { to{transform:rotate(360deg)} }
+
+  /* ── Stats Row ── */
+  .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: var(--space-3); margin-bottom: var(--space-5); }
+  .stat-card { background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-4); box-shadow: var(--shadow-sm); }
+  .stat-label { font-size: var(--font-size-xs); font-weight: var(--font-weight-semibold); letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-text-tertiary); margin-bottom: var(--space-2); }
+  .stat-val { font-size: 22px; font-weight: var(--font-weight-bold); color: var(--color-text-primary); line-height: 1; }
+  .stat-val.green { color: var(--color-success); }
+  .stat-val.red { color: var(--color-error); }
+  .stat-sub { font-size: var(--font-size-xs); color: var(--color-text-tertiary); margin-top: var(--space-1); }
+
+  /* ── Fetch Banner ── */
+  .fetch-banner { display: flex; align-items: center; justify-content: space-between; background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-3) var(--space-4); margin-bottom: var(--space-4); box-shadow: var(--shadow-sm); flex-wrap: wrap; gap: var(--space-2); }
+  .fetch-info { display: flex; align-items: center; gap: var(--space-2); }
+  .fetch-icon { font-size: var(--font-size-base); }
+  .fetch-text { font-size: var(--font-size-sm); color: var(--color-text-secondary); }
+  .fetch-text strong { color: var(--color-text-primary); }
+  .fetch-countdown { font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); color: var(--color-success); }
+
+  /* ── Refresh Banner ── */
+  .refresh-banner { display: none; align-items: center; gap: var(--space-3); background: var(--color-success-subtle); border: 1px solid rgba(52,199,89,0.3); border-radius: var(--radius-md); padding: var(--space-3) var(--space-4); margin-bottom: var(--space-3); font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); color: var(--color-success); animation: fadeInDown 0.3s ease; }
+  .refresh-banner.show { display: flex; }
+  @keyframes fadeInDown { from{opacity:0;transform:translateY(-8px)} to{opacity:1;transform:translateY(0)} }
+
+  /* ── Filter Bar ── */
+  .filter-bar { display: flex; flex-direction: column; gap: var(--space-2); margin-bottom: var(--space-4); }
+  .filter-row { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
+  .filter-label { font-size: var(--font-size-xs); color: var(--color-text-tertiary); font-weight: var(--font-weight-medium); min-width: 56px; }
+  .filter-chip { padding: 4px 10px; border-radius: var(--radius-full); font-size: var(--font-size-xs); font-weight: var(--font-weight-medium); border: 1px solid var(--color-border); background: var(--color-bg-elevated); color: var(--color-text-secondary); cursor: pointer; transition: all var(--duration-fast) var(--ease-out); }
+  .filter-chip:hover, .filter-chip.active { background: var(--color-text-primary); color: var(--color-bg); border-color: var(--color-text-primary); }
+
+  /* ── Table Card ── */
+  .table-card { background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-lg); box-shadow: var(--shadow-md); overflow: hidden; }
+  .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  table { width: 100%; border-collapse: collapse; min-width: 1100px; }
+  thead tr { background: var(--color-surface-2); border-bottom: 1px solid var(--color-border); }
+  th { padding: var(--space-3); text-align: left; font-size: var(--font-size-xs); font-weight: var(--font-weight-semibold); letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-text-tertiary); white-space: nowrap; }
+  th.ctr { text-align: center; }
+  th.rgt { text-align: right; }
+  th.sortable { cursor: pointer; user-select: none; }
+  th.sortable:hover { color: var(--color-text-primary); }
+  th.sorted { color: var(--color-primary); }
+  tbody tr { border-bottom: 1px solid var(--color-border); transition: background var(--duration-fast) var(--ease-out); cursor: pointer; }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: var(--color-surface-2); }
+  tbody tr.selected { background: var(--color-bg-subtle); }
+  td { padding: var(--space-3); vertical-align: middle; }
+  td.ctr { text-align: center; }
+  td.rgt { text-align: right; }
+
+  /* ── Ticker Cell ── */
+  .ticker-cell { display: flex; flex-direction: column; gap: 2px; }
+  .ticker-header { display: flex; align-items: center; gap: var(--space-2); }
+  .ticker-sym { font-size: var(--font-size-base); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); }
+  .ticker-name { font-size: var(--font-size-xs); color: var(--color-text-tertiary); white-space: nowrap; max-width: 110px; overflow: hidden; text-overflow: ellipsis; }
+  .sector-chip { display: inline-block; font-size: 9px; font-weight: var(--font-weight-medium); padding: 1px 5px; border-radius: 3px; background: var(--color-bg-subtle); color: var(--color-text-tertiary); border: 1px solid var(--color-border); margin-top: 1px; width: fit-content; }
+  .add-to-universe-btn { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: var(--radius-sm); background: var(--color-primary-subtle); color: var(--color-primary); border: 1px solid var(--color-primary); font-size: 14px; font-weight: var(--font-weight-bold); cursor: pointer; transition: all var(--duration-fast) var(--ease-out); line-height: 1; padding: 0; }
+  .add-to-universe-btn:hover { background: var(--color-primary); color: var(--color-text-inverse); }
+
+  /* ── Earnings Cell ── */
+  .earn-cell { display: flex; flex-direction: column; gap: var(--space-1); }
+  .earn-date { font-size: var(--font-size-sm); color: var(--color-text-primary); font-weight: var(--font-weight-medium); }
+  .earn-badge { display: inline-flex; align-items: center; gap: 3px; font-size: var(--font-size-xs); font-weight: var(--font-weight-semibold); padding: 2px 6px; border-radius: var(--radius-sm); width: fit-content; }
+  .earn-badge.urgent { background: var(--color-error-subtle); color: var(--color-error); }
+  .earn-badge.soon { background: var(--color-warning-subtle); color: var(--color-warning); }
+  .earn-badge.far { background: var(--color-bg-subtle); color: var(--color-text-tertiary); }
+
+  /* ── Rank Cell ── */
+  .rank-cell { display: flex; flex-direction: column; align-items: center; gap: var(--space-1); }
+  .rank-score { font-size: 18px; font-weight: var(--font-weight-bold); line-height: 1; }
+  .rank-score.pos { color: var(--color-success); }
+  .rank-score.neg { color: var(--color-error); }
+  .rank-score.zero { color: var(--color-text-tertiary); }
+  .rank-bar-track { width: 44px; height: 4px; border-radius: 2px; background: var(--color-bg-subtle); }
+  .rank-bar-fill { height: 100%; border-radius: 2px; transition: width 0.4s; }
+  .rank-bar-fill.pos { background: var(--color-success); }
+  .rank-bar-fill.neg { background: var(--color-error); }
+
+  /* ── Price Cells ── */
+  .price-cell { font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); padding: var(--space-1) var(--space-2); border-radius: var(--radius-sm); text-align: center; line-height: 1.3; min-width: 58px; display: inline-block; }
+  .price-cell .pct { font-size: 9px; font-weight: var(--font-weight-regular); opacity: 0.75; margin-top: 1px; }
+  .price-cell.up { background: var(--color-success-subtle); color: var(--color-success); }
+  .price-cell.down { background: var(--color-error-subtle); color: var(--color-error); }
+  .price-cell.flat { background: var(--color-bg-subtle); color: var(--color-text-tertiary); }
+
+  /* ── Today Cell ── */
+  .today-cell { display: flex; flex-direction: column; align-items: flex-end; gap: var(--space-1); }
+  .today-price { font-size: var(--font-size-base); font-weight: var(--font-weight-bold); color: var(--color-text-primary); }
+  .today-chg { font-size: var(--font-size-xs); font-weight: var(--font-weight-semibold); }
+  .today-chg.up { color: var(--color-success); }
+  .today-chg.down { color: var(--color-error); }
+
+  /* ── Sparkline ── */
+  .spark-wrap { display: flex; align-items: flex-end; gap: 2px; height: 20px; }
+  .spark-bar { width: 5px; border-radius: 1.5px; min-height: 2px; }
+  .spark-bar.up { background: var(--color-success); }
+  .spark-bar.down { background: var(--color-error); }
+  .spark-bar.flat { background: var(--color-border); }
+
+  /* ── RS Badge ── */
+  .rs-badge { display: inline-block; font-size: var(--font-size-xs); font-weight: var(--font-weight-semibold); padding: 3px 7px; border-radius: var(--radius-sm); }
+  .rs-badge.strong { background: var(--color-success-subtle); color: var(--color-success); }
+  .rs-badge.weak { background: var(--color-error-subtle); color: var(--color-error); }
+  .rs-badge.neutral { background: var(--color-bg-subtle); color: var(--color-text-tertiary); }
+
+  /* ── Streak ── */
+  .streak-cell { font-size: var(--font-size-xs); color: var(--color-text-secondary); }
+
+  /* ── Table Footer ── */
+  .table-footer { display: flex; align-items: center; justify-content: space-between; padding: var(--space-3) var(--space-4); border-top: 1px solid var(--color-border); background: var(--color-surface-2); font-size: var(--font-size-xs); color: var(--color-text-tertiary); flex-wrap: wrap; gap: var(--space-2); }
+
+  /* ── Legend ── */
+  .legend { display: flex; align-items: center; gap: var(--space-4); margin-top: var(--space-4); flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: var(--space-2); font-size: var(--font-size-xs); color: var(--color-text-tertiary); }
+  .legend-swatch { width: 10px; height: 10px; border-radius: 2px; }
+  .legend-swatch.up { background: var(--color-success); }
+  .legend-swatch.down { background: var(--color-error); }
+  .legend-swatch.flat { background: var(--color-border); }
+
+  /* ── Toast ── */
+  .toast { position: fixed; bottom: var(--space-6); right: var(--space-6); background: var(--color-text-primary); color: var(--color-bg); padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); box-shadow: var(--shadow-lg); transform: translateY(80px); opacity: 0; transition: all 0.3s ease; z-index: 200; max-width: 280px; }
+  .toast.show { transform: translateY(0); opacity: 1; }
+
+  /* ── Loading Overlay ── */
+  .loading-overlay { position: fixed; inset: 0; background: rgba(245,245,247,0.72); backdrop-filter: blur(10px); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-4); z-index: 100; transition: opacity 0.5s ease; }
+  .loading-overlay.hidden { opacity: 0; pointer-events: none; }
+  [data-theme="dark"] .loading-overlay { background: rgba(0,0,0,0.72); }
+  .loading-card { display: flex; flex-direction: column; align-items: center; gap: var(--space-4); background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: var(--space-8) var(--space-10); box-shadow: var(--shadow-lg); }
+  .loading-spinner { width: 36px; height: 36px; border-radius: 50%; border: 3px solid var(--color-bg-subtle); border-top-color: var(--color-success); animation: spin 0.8s linear infinite; }
+  .loading-text { font-size: var(--font-size-sm); color: var(--color-text-secondary); font-weight: var(--font-weight-medium); }
+  .loading-sub { font-size: var(--font-size-xs); color: var(--color-text-tertiary); }
+
+  /* ── Table Flash ── */
+  @keyframes tableFlash { 0%{box-shadow:0 0 0 0 rgba(52,199,89,0.6),var(--shadow-md)} 40%{box-shadow:0 0 0 5px rgba(52,199,89,0.25),var(--shadow-md)} 100%{box-shadow:0 0 0 0 rgba(52,199,89,0),var(--shadow-md)} }
+  .table-card.flash { animation: tableFlash 0.9s ease-out; }
+
+  /* ── Error State ── */
+  .dash-error { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: var(--space-16) var(--space-6); gap: var(--space-4); text-align: center; }
+  .dash-error-msg { font-size: var(--font-size-sm); color: var(--color-error); }
+
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--color-text-tertiary); border-radius: var(--radius-full); }
+  .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: var(--z-modal); display: none; align-items: center; justify-content: center; opacity: 0; transition: opacity var(--duration-normal) var(--ease-out); }
+  .modal-backdrop.open { display: flex; opacity: 1; }
+  .modal-card { background: var(--color-bg-elevated); border-radius: var(--radius-lg); box-shadow: var(--shadow-xl); width: 100%; max-height: 90vh; overflow-y: auto; animation: modal-enter var(--duration-slow) var(--ease-spring); }
+  @keyframes modal-enter { from { opacity: 0; transform: translateY(16px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+  .modal-header { display: flex; align-items: center; justify-content: space-between; padding: var(--space-5) var(--space-6); border-bottom: 1px solid var(--color-divider); }
+  .modal-title { font-size: var(--font-size-lg); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); }
+  .modal-close { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-sm); color: var(--color-text-secondary); transition: background var(--duration-fast); }
+  .modal-close:hover { background: var(--color-bg-subtle); }
+  .modal-close svg { width: 18px; height: 18px; }
+  .modal-body { padding: var(--space-6); }
+  /* Safe vertical centering: identical when content fits; tall Live content
+     top-aligns and scrolls instead of sliding cut-off behind the top nav. */
+
+  @media (max-width: 767px) {
+    .logo-mark { display: none; }
+    .btn, .btn-refresh, .filter-chip { min-height: 44px; }
+  }
+
+  /* Tokens live in css/styles.css (:root, global Terminal Precision) —
+     no per-screen pinning. */
+  /* Header: monochrome mark, static LIVE chip, quiet refresh */
+  .logo-mark { background: var(--color-text-primary); color: var(--color-bg); border-radius: var(--radius-sm); box-shadow: none; font-family: var(--font-mono); font-size: 16px; }
+  .header-title { letter-spacing: -0.01em; }
+  .live-pill { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.1em; background: var(--color-bg-inset); border: 1px solid var(--color-border); color: var(--color-text-secondary); border-radius: 4px; }
+  .pulse-dot { animation: none; background: var(--color-success); }
+  .btn { font-family: var(--font-mono); font-size: 12px; border-radius: var(--radius-sm); }
+  .btn:active { transform: translate(1px, 1px); }
+  .btn-refresh { border: 1px solid var(--color-border-strong); background: var(--color-bg-elevated); color: var(--color-text-primary); box-shadow: var(--shadow-sm); font-family: var(--font-mono); font-size: 12px; }
+  .btn-refresh:hover:not(:disabled) { background: var(--color-bg-inset); color: var(--color-text-primary); box-shadow: var(--shadow-sm); transform: none; border-color: var(--color-text-primary); }
+  .btn-refresh:active:not(:disabled) { transform: translate(1px, 1px); }
+  /* Stats: joined console strip (portfolio treatment, mini scale) */
+  .stats-row { gap: 0; border: 1px solid var(--color-border); border-radius: var(--radius-md); overflow: hidden; background: var(--color-bg-elevated); margin-bottom: var(--space-4); }
+  .stat-card { border: none; border-right: 1px solid var(--color-divider); border-radius: 0; box-shadow: none; padding: var(--space-3) var(--space-4); }
+  .stat-card:last-child { border-right: none; }
+  .stat-label { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.12em; color: var(--color-text-secondary); }
+  .stat-val { font-size: 20px; font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; }
+  /* Banner + filters: mono chips */
+  .fetch-countdown { font-family: var(--font-mono); }
+  .refresh-banner { font-family: var(--font-mono); font-size: var(--font-size-xs); }
+  .filter-label { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; }
+  .filter-chip { font-family: var(--font-mono); font-size: 11px; border-radius: var(--radius-sm); }
+  .filter-chip:active { transform: translate(1px, 1px); }
+  /* Table card: flat console, dense mono */
+  .table-card { border-radius: var(--radius-md); box-shadow: var(--shadow-sm); }
+  th { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.1em; color: var(--color-text-secondary); background: var(--color-bg-inset); }
+  th { padding: var(--space-2) var(--space-3); }
+  td { padding: var(--space-2) var(--space-3); font-size: 13px; }
+  tbody tr:hover { background: var(--color-bg-inset); }
+  th.sorted { color: var(--color-text-primary); }
+  .ticker-sym { font-family: var(--font-mono); }
+  .ticker-name { font-size: 11px; }
+  .sector-chip { font-family: var(--font-mono); font-size: 9px; border-radius: 4px; }
+  .add-to-universe-btn { border-radius: var(--radius-sm); font-family: var(--font-mono); }
+  .add-to-universe-btn:active { transform: translate(1px, 1px); }
+  .earn-badge, .rs-badge { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.06em; border-radius: 4px; }
+  .price-cell { font-family: var(--font-mono); }
+  .today-price, .rank-score { font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; }
+  .table-footer { font-family: var(--font-mono); background: var(--color-bg-inset); }
+  /* Table flash: calm wash instead of green glow */
+  @keyframes tableFlash { 0% { background: var(--color-bg-inset); } 100% { background: transparent; } }
+  /* Loading: monochrome spinner ring */
+  .loading-spinner { border-top-color: var(--color-text-primary); }
+  .loading-card { border-radius: var(--radius-md); }
+  /* Chart modal template: token canvas, mono tools, calm entrance */
+  .modal-card { animation: modal-enter var(--duration-normal) var(--ease-out); }
+  @keyframes modal-enter { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+
+<link rel="stylesheet" href="/css/earnings.css">
+<section id="earnings-watchlist" aria-labelledby="ew-title">
+  <header class="ew-header">
+    <div>
+      <div class="ew-eyebrow">RESEARCH / EARNINGS <span>MODEL V2</span></div>
+      <h1 id="ew-title">Earnings Watchlist</h1>
+      <p class="ew-subtitle">Price momentum. Market context. The next announcement.</p>
+    </div>
+    <div class="ew-header-right">
+      <span class="ew-session" id="ew-asof">Loading completed-session data…</span>
+      <button type="button" class="ew-refresh" id="ew-refresh" data-ew-action="refresh">↻ Refresh prices</button>
+    </div>
+  </header>
+
+  <div class="ew-stats" aria-label="Summary of filtered stocks">
+    <div><span class="ew-stat-label">Reporting soon</span><strong id="ew-stat-soon">—</strong><small>Within 14 calendar days</small></div>
+    <div><span class="ew-stat-label">Positive returns</span><strong id="ew-stat-return" class="up">—</strong><small id="ew-stat-return-sub">Last 10 sessions</small></div>
+    <div><span class="ew-stat-label">Beating SPY</span><strong id="ew-stat-rs" class="up">—</strong><small id="ew-stat-rs-sub">Same-date compounded returns</small></div>
+    <div><span class="ew-stat-label">Score coverage</span><strong id="ew-stat-coverage">—</strong><small id="ew-stat-coverage-sub">Current, complete inputs</small></div>
+  </div>
+
+  <div class="ew-controls">
+    <div class="ew-window-row" role="group" aria-label="Earnings window">
+      <span class="ew-control-label">EARNINGS</span>
+      <button type="button" data-window="7" aria-pressed="false">7 days</button>
+      <button type="button" data-window="14" aria-pressed="true">14 days</button>
+      <button type="button" data-window="30" aria-pressed="false">30 days</button>
+      <button type="button" data-window="all" aria-pressed="false">All</button>
+      <button type="button" data-window="unknown" aria-pressed="false">Unknown / Pending</button>
+    </div>
+    <div class="ew-input-row">
+      <label class="ew-search-label">Search<input id="ew-search" type="search" placeholder="Ticker or company…" autocomplete="off"></label>
+      <div class="ew-field" data-ew-field="sector">
+        <span class="ew-field-label" id="ew-sector-label">Sector</span>
+        <button type="button" class="ew-dropdown" id="ew-sector" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="ew-sector-label ew-sector-value">
+          <span class="ew-dropdown-value" id="ew-sector-value">All sectors</span>
+          <svg class="chevron" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <div class="ew-menu" id="ew-sector-menu" role="listbox" aria-labelledby="ew-sector-label" hidden></div>
+      </div>
+      <div class="ew-field" data-ew-field="signal">
+        <span class="ew-field-label" id="ew-signal-label">Momentum</span>
+        <button type="button" class="ew-dropdown" id="ew-signal" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="ew-signal-label ew-signal-value">
+          <span class="ew-dropdown-value" id="ew-signal-value">All scores</span>
+          <svg class="chevron" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <div class="ew-menu" id="ew-signal-menu" role="listbox" aria-labelledby="ew-signal-label" hidden>
+          <button type="button" class="ew-option" role="option" aria-selected="true" data-value="all"><span class="ew-option-label">All scores</span></button>
+          <button type="button" class="ew-option" role="option" aria-selected="false" data-value="positive"><span class="ew-option-label">Positive</span></button>
+          <button type="button" class="ew-option" role="option" aria-selected="false" data-value="negative"><span class="ew-option-label">Negative</span></button>
+          <button type="button" class="ew-option" role="option" aria-selected="false" data-value="unscored"><span class="ew-option-label">Unscored</span></button>
+        </div>
+      </div>
+      <div class="ew-field" data-ew-field="sort">
+        <span class="ew-field-label" id="ew-sort-label">Sort by</span>
+        <button type="button" class="ew-dropdown" id="ew-sort" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="ew-sort-label ew-sort-value">
+          <span class="ew-dropdown-value" id="ew-sort-value">Momentum score ↓</span>
+          <svg class="chevron" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <div class="ew-menu" id="ew-sort-menu" role="listbox" aria-labelledby="ew-sort-label" hidden>
+          <button type="button" class="ew-option" role="option" aria-selected="true" data-value="score"><span class="ew-option-label">Momentum score ↓</span></button>
+          <button type="button" class="ew-option" role="option" aria-selected="false" data-value="earnings"><span class="ew-option-label">Earnings date ↑</span></button>
+          <button type="button" class="ew-option" role="option" aria-selected="false" data-value="return_10d"><span class="ew-option-label">10-session return ↓</span></button>
+          <button type="button" class="ew-option" role="option" aria-selected="false" data-value="rs_10d"><span class="ew-option-label">Relative strength ↓</span></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="ew-error" id="ew-error" role="alert" hidden><span id="ew-error-text"></span><button type="button" data-ew-action="reload">Retry</button></div>
+  <p class="ew-message" id="ew-message" role="status" aria-live="polite"></p>
+  <div class="ew-board" id="ew-board" aria-busy="true">
+    <div class="ew-table-wrap">
+      <table class="ew-table" aria-label="Earnings watchlist, completed daily sessions">
+        <thead><tr><th scope="col">Stock</th><th scope="col">Earnings</th><th scope="col">Momentum <span>±100</span></th><th scope="col">Last 10 sessions <span>oldest → newest</span></th><th scope="col">10d return</th><th scope="col">RS vs SPY</th><th scope="col">Latest close</th></tr></thead>
+        <tbody id="ew-body"><tr><td colspan="7" class="ew-empty">Reading stored prices and calculating momentum…</td></tr></tbody>
+      </table>
+    </div>
+    <div class="ew-mobile" id="ew-mobile"><p class="ew-empty">Reading stored prices and calculating momentum…</p></div>
+    <footer class="ew-table-footer"><span id="ew-count">Loading watchlist…</span><span>Tap a score for its breakdown ↗</span></footer>
+  </div>
+
+  <div class="ew-legend" aria-label="Daily return legend">
+    <span><i class="up">+</i> Positive</span><span><i class="down">−</i> Negative</span><span><i class="flat">=</i> Flat ±0.15%</span><span><i class="missing">·</i> Missing</span>
+    <span>Stronger shading: &lt;1% / 1–3% / ≥3% · Tap a tile for price &amp; volume</span>
+  </div>
+  <details class="ew-method">
+    <summary>How the momentum score works <span>40 / 25 / 25 / 10</span></summary>
+    <p>A signed score from −100 to +100: <strong>40% ten-session momentum + 25% three-session momentum + 25% outperformance vs SPY + 10% directional consistency.</strong></p>
+    <p>Returns use close-to-close compounding. Return factors are divided by 2 × daily volatility × √sessions and capped at ±1. Volatility uses 20 daily returns, with a 0.50% floor. Consistency weights the latest three sessions twice.</p>
+    <p>Direction changes reduce the score's magnitude by up to 30%. Earnings proximity adds no points. The model requires 21 valid stock closes and 11 matching SPY closes. Today's session becomes eligible at 4:05 PM ET; partial intraday sessions are excluded.</p>
+    <p>RS is the stock's ten-session return minus SPY's return, in percentage points. Stocks missing required US trading dates are unscored. This is a momentum measure, not an earnings-outcome prediction.</p>
+  </details>
+  <footer class="ew-data-footer"><span id="ew-fetched"></span><span id="ew-next"></span><span id="ew-benchmark"></span><span>Screen reloads stored data every 5 minutes</span></footer>
+
+  <dialog id="ew-dialog" aria-labelledby="ew-dialog-title">
+    <div class="ew-dialog-header"><h2 id="ew-dialog-title"></h2><form method="dialog"><button type="submit" aria-label="Close details">×</button></form></div>
+    <div id="ew-dialog-body"></div>
+  </dialog>
+</section>

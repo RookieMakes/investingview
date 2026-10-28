@@ -1,0 +1,648 @@
+<!-- ═══════════════════════════════════════════════════════════
+     Alerts Screen — Price Alerts & Notifications
+     Loaded by App.loadScreen('alerts') into #content
+
+     Two-column layout: Alert table + Chart + Form (left)
+     Watchlist panel + Activity log (right)
+     ═══════════════════════════════════════════════════════════ -->
+
+<style>
+  /* ── Screen Layout ── */
+  .screen { padding: 0; max-width: 1440px; margin: 0 auto; }
+  .page-header { display: flex; align-items: flex-start; justify-content: space-between; padding: var(--space-6) 0 var(--space-4); flex-wrap: wrap; gap: var(--space-4); }
+  .page-header-text h1 { font-size: var(--font-size-3xl); font-weight: var(--font-weight-bold); letter-spacing: -0.02em; line-height: 1.2; }
+  .page-header-text p { margin-top: var(--space-1); font-size: var(--font-size-base); color: var(--color-text-secondary); }
+  .page-header-actions { display: flex; gap: var(--space-3); flex-shrink: 0; align-items: center; flex-wrap: wrap; }
+  .hidden { display: none !important; }
+
+  /* ── Buttons ── */
+  .btn { display: inline-flex; align-items: center; gap: var(--space-2); padding: 0 var(--space-4); height: 36px; border-radius: var(--radius-sm); font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); cursor: pointer; border: 1px solid transparent; transition: all var(--duration-fast) var(--ease-out); white-space: nowrap; }
+  .btn:active { transform: scale(0.97); }
+  .btn svg { width: 16px; height: 16px; }
+  .btn-primary { background: var(--color-primary); color: var(--color-text-inverse); border-color: var(--color-primary); }
+  .btn-primary:hover { background: var(--color-primary-hover); border-color: var(--color-primary-hover); }
+  .btn-ghost { background: transparent; color: var(--color-text-secondary); border-color: var(--color-border); }
+  .btn-ghost:hover { background: var(--color-bg-subtle); color: var(--color-text-primary); }
+
+  /* ── Stats Row ── */
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-4); margin-bottom: var(--space-6); }
+  .stat-card { background: var(--color-bg-elevated); border: 1px solid var(--color-divider, var(--color-border)); border-radius: var(--radius-md); padding: var(--space-5); display: flex; align-items: center; gap: var(--space-4); transition: all var(--duration-normal) var(--ease-out); }
+  .stat-card:hover { box-shadow: var(--shadow-sm); }
+  .stat-card.triggered { background: var(--color-error-subtle); }
+  .stat-icon { width: 44px; height: 44px; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; flex-shrink: 0; position: relative; }
+  .stat-icon svg { width: 22px; height: 22px; }
+  .stat-icon.primary { background: var(--color-primary-subtle); color: var(--color-primary); }
+  .stat-icon.success { background: var(--color-success-subtle); color: var(--color-success); }
+  .stat-icon.error { background: var(--color-error-subtle); color: var(--color-error); }
+  .stat-icon.info { background: var(--color-info-subtle); color: var(--color-info); }
+  .stat-badge { position: absolute; top: -4px; right: -4px; min-width: 18px; height: 18px; border-radius: var(--radius-full); background: var(--color-error); color: #fff; font-size: 10px; font-weight: var(--font-weight-bold); display: flex; align-items: center; justify-content: center; padding: 0 4px; border: 2px solid var(--color-bg-elevated); }
+  .stat-content h3 { font-size: var(--font-size-2xl); font-weight: var(--font-weight-bold); letter-spacing: -0.02em; line-height: 1.2; }
+  .stat-content p { font-size: var(--font-size-sm); color: var(--color-text-secondary); margin-top: var(--space-1); }
+  .stat-card.triggered .stat-content h3 { color: var(--color-error); }
+  .stat-card.triggered .stat-content p { color: var(--color-error); }
+
+  /* ── Two-Column Layout ── */
+  .two-col { display: grid; grid-template-columns: 1fr 380px; gap: var(--space-6); align-items: start; }
+  .left-col { display: flex; flex-direction: column; gap: var(--space-6); min-width: 0; }
+
+  /* ── Card ── */
+  .card { background: var(--color-bg-elevated); border: 1px solid var(--color-divider, var(--color-border)); border-radius: var(--radius-lg); overflow: hidden; transition: all var(--duration-normal) var(--ease-out); }
+  .card-header { display: flex; align-items: center; justify-content: space-between; padding: var(--space-5) var(--space-5) var(--space-3); }
+  .card-header h2 { font-size: var(--font-size-md); font-weight: var(--font-weight-semibold); letter-spacing: -0.02em; }
+
+  /* ── Error Banner ── */
+  .error-banner { display: none; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); background: var(--color-error-subtle); border: 1px solid var(--color-error); border-radius: var(--radius-md); margin-bottom: var(--space-4); }
+  .error-banner.visible { display: flex; }
+  .error-banner svg { width: 18px; height: 18px; color: var(--color-error); flex-shrink: 0; }
+  .error-banner span { flex: 1; font-size: var(--font-size-sm); color: var(--color-error); font-weight: var(--font-weight-medium); }
+  .error-banner button { background: none; border: none; color: var(--color-error); font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+
+  /* ── Loading State ── */
+  .loading-state { display: none; padding: var(--space-5); }
+  .loading-state.visible { display: block; }
+  @keyframes shimmer { 0% { background-position: -400px 0; } 100% { background-position: 400px 0; } }
+  .skeleton { background: linear-gradient(90deg, var(--color-bg-subtle) 25%, var(--color-bg-inset) 50%, var(--color-bg-subtle) 75%); background-size: 800px 100%; border-radius: var(--radius-sm); animation: shimmer 1.5s ease-in-out infinite; }
+  .skeleton-stat { height: 88px; border-radius: var(--radius-md); margin-bottom: var(--space-4); }
+  .skeleton-row { height: 44px; border-radius: var(--radius-sm); margin-bottom: var(--space-2); }
+
+  /* ── Alert Table ── */
+  .alert-table-wrap { overflow-x: auto; }
+  .alert-table { width: 100%; border-collapse: collapse; }
+  .alert-table th { padding: var(--space-3) var(--space-4); text-align: left; font-size: var(--font-size-xs); font-weight: var(--font-weight-semibold); letter-spacing: 0.04em; text-transform: uppercase; color: var(--color-text-secondary); border-bottom: 1px solid var(--color-divider, var(--color-border)); white-space: nowrap; cursor: pointer; user-select: none; }
+  .alert-table th:hover { color: var(--color-text-primary); }
+  .alert-table th .sort-arrow { display: inline-block; margin-left: 2px; opacity: 0.4; font-size: 10px; }
+  .alert-table th.sorted .sort-arrow { opacity: 1; color: var(--color-primary); }
+  .alert-table th.text-right { text-align: right; }
+  .alert-table td { padding: var(--space-3) var(--space-4); font-size: var(--font-size-sm); border-bottom: 1px solid var(--color-divider, var(--color-border)); vertical-align: middle; }
+  .alert-table td.text-right { text-align: right; font-variant-numeric: tabular-nums; }
+  .alert-table tbody tr { transition: background var(--duration-fast) var(--ease-out); cursor: pointer; }
+  .alert-table tbody tr:hover { background: var(--color-primary-subtle); }
+  .alert-table tbody tr:last-child td { border-bottom: none; }
+  .status-badge { display: inline-flex; align-items: center; gap: var(--space-2); font-size: var(--font-size-xs); font-weight: var(--font-weight-medium); }
+  .status-dot { width: 8px; height: 8px; border-radius: var(--radius-full); flex-shrink: 0; }
+  .status-dot.armed { background: var(--color-success); box-shadow: 0 0 0 2px var(--color-success-subtle); }
+  .status-dot.triggered { background: var(--color-warning); box-shadow: 0 0 0 2px var(--color-warning-subtle); }
+  .status-dot.disabled { background: var(--color-text-tertiary); }
+  .ticker-badge { display: inline-flex; align-items: center; padding: var(--space-1) var(--space-2); background: var(--color-bg-subtle); border-radius: var(--radius-sm); font-family: var(--font-mono); font-size: var(--font-size-xs); font-weight: var(--font-weight-semibold); letter-spacing: 0.04em; color: var(--color-text-primary); }
+  .type-badge { display: inline-flex; align-items: center; padding: var(--space-1) var(--space-2); border-radius: var(--radius-sm); font-size: var(--font-size-xs); font-weight: var(--font-weight-medium); }
+  .type-badge.price { background: var(--color-primary-subtle); color: var(--color-primary); }
+  .type-badge.volume { background: var(--color-warning-subtle); color: var(--color-warning); }
+  .type-badge.sr { background: var(--color-success-subtle); color: var(--color-success); }
+  .condition-text { font-family: var(--font-mono); font-size: var(--font-size-xs); color: var(--color-text-primary); }
+  .date-text { color: var(--color-text-secondary); white-space: nowrap; }
+  .never-text { color: var(--color-text-tertiary); font-style: italic; }
+  .price-mono { font-family: var(--font-mono); font-size: var(--font-size-sm); font-variant-numeric: tabular-nums; }
+  .price-up { color: var(--color-stock-up); }
+  .price-down { color: var(--color-stock-down); }
+
+  /* ── Action Buttons ── */
+  .action-btns { display: flex; align-items: center; justify-content: flex-end; gap: var(--space-1); }
+  .action-btn { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; padding: 0; background: transparent; border: 1px solid transparent; border-radius: var(--radius-sm); color: var(--color-text-tertiary); cursor: pointer; transition: all var(--duration-fast) var(--ease-out); }
+  .action-btn:hover { color: var(--color-text-primary); background: var(--color-bg-subtle); border-color: var(--color-border); }
+  .action-btn:active { transform: scale(0.92); }
+  .action-btn.delete:hover { color: var(--color-error); background: var(--color-error-subtle); border-color: var(--color-error-subtle); }
+  .action-btn svg { width: 15px; height: 15px; }
+
+  /* ── Empty State ── */
+  .empty-state { display: none; flex-direction: column; align-items: center; justify-content: center; padding: var(--space-12) var(--space-6); text-align: center; }
+  .empty-state.visible { display: flex; }
+  .empty-icon { width: 64px; height: 64px; border-radius: var(--radius-lg); background: var(--color-bg-subtle); display: flex; align-items: center; justify-content: center; margin-bottom: var(--space-5); color: var(--color-text-tertiary); }
+  .empty-icon svg { width: 32px; height: 32px; }
+  .empty-state h3 { font-size: var(--font-size-lg); font-weight: var(--font-weight-semibold); margin-bottom: var(--space-2); }
+  .empty-state p { font-size: var(--font-size-sm); color: var(--color-text-secondary); max-width: 320px; margin-bottom: var(--space-5); }
+
+
+  /* ─── MODAL (shared) ─── */
+  .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:var(--z-modal);display:none;align-items:center;justify-content:center;opacity:0;transition:opacity var(--duration-normal) var(--ease-out)}
+  .modal-backdrop.open{display:flex;opacity:1}
+  .modal-card{background:var(--color-bg-elevated);border-radius:var(--radius-lg);box-shadow:var(--shadow-xl);width:100%;max-height:90vh;overflow-y:auto;animation:modal-enter var(--duration-slow) var(--ease-spring)}
+  @keyframes modal-enter{from{opacity:0;transform:translateY(16px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+  .modal-header{display:flex;align-items:center;justify-content:space-between;padding:var(--space-5) var(--space-6);border-bottom:1px solid var(--color-divider)}
+  .modal-title{font-size:var(--font-size-lg);font-weight:var(--font-weight-semibold);color:var(--color-text-primary)}
+  .modal-close{width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:var(--radius-sm);color:var(--color-text-secondary);transition:background var(--duration-fast)}
+  .modal-close:hover{background:var(--color-bg-subtle)}
+  .modal-close svg{width:18px;height:18px}
+  .modal-body{padding:var(--space-6)}
+  /* Safe vertical centering: identical when content fits; tall Live content top-aligns and scrolls instead of sliding cut-off behind the top nav. */
+  /* ═══ OPTION A — Legend Panel Styling ═══
+     Distinct background to visually separate labels from chart canvas.
+     To revert: remove the variable declarations below and the
+     background/border-left/padding from .chart-legend-panel */
+
+  /* ─── S/R PICKER ─── */
+
+  /* ── Form Card ── */
+  .form-card .card-header { border-bottom: 1px solid var(--color-divider, var(--color-border)); padding-bottom: var(--space-4); }
+  .form-body { padding: var(--space-5); display: flex; flex-direction: column; gap: var(--space-4); }
+  .form-group { display: flex; flex-direction: column; gap: var(--space-2); }
+  .form-label { font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); color: var(--color-text-primary); }
+  .form-input { height: 36px; padding: 0 var(--space-3); background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-sm); font-size: var(--font-size-sm); color: var(--color-text-primary); transition: all var(--duration-fast) var(--ease-out); }
+  .form-input:focus { outline: none; border-color: var(--color-primary); box-shadow: 0 0 0 3px var(--color-primary-subtle); }
+  .form-input.error { border-color: var(--color-error); box-shadow: 0 0 0 3px var(--color-error-subtle); }
+  .form-input::placeholder { color: var(--color-text-tertiary); }
+  .form-select { height: 36px; padding: 0 var(--space-8) 0 var(--space-3); background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-sm); font-size: var(--font-size-sm); color: var(--color-text-primary); cursor: pointer; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236E6E73' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; transition: all var(--duration-fast) var(--ease-out); }
+  .form-select:focus { outline: none; border-color: var(--color-primary); box-shadow: 0 0 0 3px var(--color-primary-subtle); }
+  .form-textarea { min-height: 64px; padding: var(--space-3); background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-sm); font-size: var(--font-size-sm); color: var(--color-text-primary); resize: vertical; transition: all var(--duration-fast) var(--ease-out); }
+  .form-textarea:focus { outline: none; border-color: var(--color-primary); box-shadow: 0 0 0 3px var(--color-primary-subtle); }
+  .form-hint { font-size: var(--font-size-xs); color: var(--color-text-secondary); }
+  .form-error { font-size: var(--font-size-xs); color: var(--color-error); display: none; }
+  .form-error.visible { display: block; }
+  .form-company { font-size: var(--font-size-xs); color: var(--color-success); display: none; }
+  .form-company.visible { display: block; }
+  .form-actions { display: flex; gap: var(--space-3); padding-top: var(--space-2); }
+
+  /* ── Right Column ── */
+  .right-col { display: flex; flex-direction: column; gap: var(--space-6); position: sticky; top: calc(var(--nav-height) + var(--space-8)); }
+
+  /* ── Watchlist ── */
+  .watchlist-selector { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-3) var(--space-5); border-bottom: 1px solid var(--color-divider, var(--color-border)); }
+  .watchlist-select { flex: 1; height: 32px; padding: 0 var(--space-8) 0 var(--space-3); background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-sm); font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); color: var(--color-text-primary); cursor: pointer; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236E6E73' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 8px center; transition: border-color var(--duration-fast) var(--ease-out); }
+  .watchlist-select:focus { outline: none; border-color: var(--color-primary); box-shadow: 0 0 0 3px var(--color-primary-subtle); }
+  .watchlist-action-btn { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; padding: 0; background: transparent; border: 1px solid transparent; border-radius: var(--radius-sm); color: var(--color-text-secondary); cursor: pointer; transition: all var(--duration-fast) var(--ease-out); }
+  .watchlist-action-btn:hover { background: var(--color-bg-subtle); color: var(--color-text-primary); border-color: var(--color-border); }
+  .watchlist-action-btn svg { width: 16px; height: 16px; }
+  .watchlist-tickers-list { max-height: 360px; overflow-y: auto; }
+  .watchlist-tickers-list::-webkit-scrollbar { width: 5px; }
+  .watchlist-tickers-list::-webkit-scrollbar-track { background: transparent; }
+  .watchlist-tickers-list::-webkit-scrollbar-thumb { background: var(--color-bg-subtle); border-radius: var(--radius-full); }
+  .ticker-list-header { display: flex; align-items: center; padding: var(--space-2) var(--space-5); border-bottom: 1px solid var(--color-divider, var(--color-border)); background: var(--color-bg-inset); position: sticky; top: 0; z-index: 1; }
+  .ticker-col-label { font-size: var(--font-size-xs); font-weight: var(--font-weight-semibold); color: var(--color-text-tertiary); text-transform: uppercase; letter-spacing: 0.04em; }
+  .ticker-col-label:first-child { width: 52px; flex-shrink: 0; }
+  .ticker-col-label:nth-child(2) { flex: 1; text-align: right; }
+  .ticker-col-label:nth-child(3) { width: 60px; text-align: right; flex-shrink: 0; }
+  .ticker-col-spacer { width: 24px; flex-shrink: 0; }
+  .ticker-row { display: flex; align-items: center; padding: var(--space-3) var(--space-5); border-bottom: 1px solid var(--color-divider, var(--color-border)); cursor: pointer; transition: background var(--duration-fast) var(--ease-out); }
+  .ticker-row:last-child { border-bottom: none; }
+  .ticker-row:hover { background: var(--color-primary-subtle); }
+  .ticker-symbol { font-size: var(--font-size-sm); font-weight: var(--font-weight-bold); color: var(--color-text-primary); width: 52px; flex-shrink: 0; }
+  .ticker-price { font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); color: var(--color-text-primary); font-variant-numeric: tabular-nums; flex: 1; text-align: right; font-family: var(--font-mono); }
+  .ticker-change { font-size: var(--font-size-xs); font-weight: var(--font-weight-semibold); font-variant-numeric: tabular-nums; width: 60px; text-align: right; flex-shrink: 0; font-family: var(--font-mono); }
+  .ticker-change.pos { color: var(--color-stock-up); }
+  .ticker-change.neg { color: var(--color-stock-down); }
+  .ticker-remove { display: none; width: 20px; height: 20px; border-radius: 50%; border: none; background: transparent; color: var(--color-text-tertiary); font-size: 14px; line-height: 1; cursor: pointer; align-items: center; justify-content: center; margin-left: var(--space-1); flex-shrink: 0; transition: all var(--duration-fast) var(--ease-out); }
+  .ticker-row:hover .ticker-remove { display: flex; }
+  .ticker-remove:hover { background: var(--color-error-subtle); color: var(--color-error); }
+
+  /* ── Watchlist Add/Search ── */
+  .watchlist-add-area { padding: var(--space-3) var(--space-5); border-top: 1px solid var(--color-divider, var(--color-border)); }
+  .watchlist-search-wrap { position: relative; }
+  .ticker-input-row { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
+  .watchlist-search-input { flex: 1; height: 34px; padding: 0 var(--space-3); background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-sm); font-size: var(--font-size-sm); color: var(--color-text-primary); transition: all var(--duration-fast) var(--ease-out); min-width: 0; }
+  .watchlist-search-input::placeholder { color: var(--color-text-tertiary); }
+  .watchlist-search-input:focus { outline: none; border-color: var(--color-primary); box-shadow: 0 0 0 3px var(--color-primary-subtle); }
+  .ticker-validation { font-size: 15px; flex-shrink: 0; min-width: 18px; text-align: center; }
+  .ticker-validation.valid   { color: var(--color-success); }
+  .ticker-validation.invalid { color: var(--color-error); }
+  .ticker-validation.loading { color: var(--color-text-secondary); }
+  .ticker-info-line { font-size: var(--font-size-xs); color: var(--color-text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-height: 16px; position: relative; margin-top: 2px; }
+  .btn-add-ticker { display: inline-flex; align-items: center; justify-content: center; height: 34px; padding: 0 var(--space-3); border-radius: var(--radius-sm); font-size: var(--font-size-xs); font-weight: var(--font-weight-semibold); background: var(--color-success); color: #fff; border: none; cursor: pointer; flex-shrink: 0; transition: all var(--duration-fast) var(--ease-out); white-space: nowrap; }
+  .btn-add-ticker:hover { opacity: 0.88; }
+  .btn-add-ticker:active { transform: scale(0.96); }
+  .btn-add-ticker:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+  @keyframes ticker-shake { 0%, 100% { transform: translateX(0); } 20%, 60% { transform: translateX(-3px); } 40%, 80% { transform: translateX(3px); } }
+  .watchlist-search-input.shake { animation: ticker-shake 0.3s ease; border-color: var(--color-error); }
+
+  /* ── Alert Log ── */
+  .alert-log { max-height: 320px; overflow-y: auto; }
+  .alert-log::-webkit-scrollbar { width: 5px; }
+  .alert-log::-webkit-scrollbar-track { background: transparent; }
+  .alert-log::-webkit-scrollbar-thumb { background: var(--color-bg-subtle); border-radius: var(--radius-full); }
+  .log-entry { display: flex; gap: var(--space-3); padding: var(--space-3) var(--space-5); border-bottom: 1px solid var(--color-divider, var(--color-border)); transition: background var(--duration-fast) var(--ease-out); }
+  .log-entry:last-child { border-bottom: none; }
+  .log-entry:hover { background: var(--color-bg-subtle); }
+  .log-indicator { width: 3px; border-radius: var(--radius-full); flex-shrink: 0; align-self: stretch; }
+  .log-indicator.resistance { background: var(--color-error); }
+  .log-indicator.price { background: var(--color-primary); }
+  .log-indicator.support { background: var(--color-success); }
+  .log-indicator.volume { background: var(--color-warning); }
+  .log-indicator.sr-touch { background: var(--color-primary); }
+  .log-indicator.sr-break { background: var(--color-warning); }
+  .log-content { flex: 1; min-width: 0; }
+  .log-message { font-size: var(--font-size-sm); color: var(--color-text-primary); line-height: var(--line-height-normal); }
+  .log-time { font-size: var(--font-size-xs); color: var(--color-text-tertiary); margin-top: var(--space-1); }
+
+  /* ── Toast Notification ── */
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--color-text-primary); color: var(--color-bg); padding: 12px 24px; border-radius: var(--radius-lg); font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); box-shadow: var(--shadow-lg); z-index: 10000; animation: fadeUp 0.3s ease; white-space: nowrap; pointer-events: none; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateX(-50%) translateY(10px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+
+  /* ── Confirm Dialog ── */
+  .confirm-overlay { display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.4); z-index: var(--z-modal, 400); align-items: center; justify-content: center; }
+  .confirm-overlay.visible { display: flex; }
+  .confirm-dialog { background: var(--color-bg-elevated); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); padding: var(--space-6); max-width: 400px; width: 100%; text-align: center; }
+  .confirm-dialog h3 { font-size: var(--font-size-md); font-weight: var(--font-weight-semibold); margin-bottom: var(--space-2); }
+  .confirm-dialog p { font-size: var(--font-size-sm); color: var(--color-text-secondary); margin-bottom: var(--space-5); }
+  .confirm-actions { display: flex; gap: var(--space-3); justify-content: center; }
+  .confirm-actions .btn-danger { background: var(--color-error); color: #fff; border-color: var(--color-error); }
+  .confirm-actions .btn-danger:hover { opacity: 0.9; }
+
+  /* ── Manage Watchlists Modal (matches design mockup) ── */
+  .wl-modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.4); z-index: var(--z-modal, 400); align-items: center; justify-content: center; opacity: 0; transition: opacity var(--duration-normal) var(--ease-out); }
+  .wl-modal-overlay.visible { display: flex; opacity: 1; }
+  .wl-modal { background: var(--color-bg-elevated); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); width: 100%; max-width: 560px; max-height: 90vh; overflow-y: auto; transform: translateY(20px); transition: transform var(--duration-normal) var(--ease-out); position: relative; padding: var(--space-6); }
+  .wl-modal-overlay.visible .wl-modal { transform: translateY(0); }
+  .wl-modal-close { position: absolute; top: var(--space-4); right: var(--space-4); width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; background: transparent; border: none; border-radius: var(--radius-sm); color: var(--color-text-tertiary); font-size: 18px; cursor: pointer; transition: all var(--duration-fast) var(--ease-out); line-height: 1; padding: 0; }
+  .wl-modal-close:hover { color: var(--color-text-primary); background: var(--color-bg-subtle); }
+  .wl-modal-title { font-size: var(--font-size-lg); font-weight: var(--font-weight-bold); color: var(--color-text-primary); margin-bottom: var(--space-1); text-align: center; }
+  .wl-modal-desc { font-size: var(--font-size-sm); color: var(--color-text-secondary); margin-bottom: var(--space-6); line-height: var(--line-height-normal); text-align: center; }
+  .wl-modal-actions { display: flex; justify-content: flex-end; }
+  .wl-modal-btn { padding: var(--space-2) var(--space-5); border-radius: var(--radius-sm); font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); cursor: pointer; border: 1px solid transparent; transition: all var(--duration-fast) var(--ease-out); background: var(--color-bg-elevated); border-color: var(--color-border); color: var(--color-text-secondary); }
+  .wl-modal-btn:hover { border-color: var(--color-border-strong); color: var(--color-text-primary); }
+  .wl-modal-btn:active { transform: scale(0.97); }
+
+  /* ── Manage List ── */
+  .manage-list { max-height: 360px; overflow-y: auto; margin-bottom: var(--space-5); border: 1px solid var(--color-divider); border-radius: var(--radius-md); background: var(--color-bg-elevated); }
+  .manage-list::-webkit-scrollbar { width: 5px; }
+  .manage-list::-webkit-scrollbar-track { background: transparent; }
+  .manage-list::-webkit-scrollbar-thumb { background: var(--color-bg-subtle); border-radius: var(--radius-full); }
+  .manage-empty { padding: var(--space-8) var(--space-5); text-align: center; color: var(--color-text-tertiary); font-size: var(--font-size-sm); }
+  .manage-item { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--color-divider); transition: background var(--duration-fast) var(--ease-out); }
+  .manage-item:last-child { border-bottom: none; }
+  .manage-item:hover { background: var(--color-bg-subtle); }
+  .manage-item.active { background: var(--color-primary-subtle); border-left: 3px solid var(--color-primary); padding-left: var(--space-3); }
+  .manage-name-wrap { flex: 1; min-width: 0; }
+  .manage-name { font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .manage-badge { display: inline-flex; align-items: center; padding: var(--space-1) var(--space-2); border-radius: var(--radius-sm); font-size: var(--font-size-xs); font-weight: var(--font-weight-medium); color: var(--color-text-secondary); background: var(--color-bg-subtle); white-space: nowrap; flex-shrink: 0; }
+  .manage-btns { display: flex; align-items: center; gap: var(--space-1); flex-shrink: 0; }
+  .manage-icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; padding: 0; background: transparent; border: 1px solid transparent; border-radius: var(--radius-sm); color: var(--color-text-tertiary); cursor: pointer; transition: all var(--duration-fast) var(--ease-out); }
+  .manage-icon-btn:hover { color: var(--color-text-primary); background: var(--color-bg-subtle); border-color: var(--color-border); }
+  .manage-icon-btn.delete:hover { color: var(--color-error); background: var(--color-error-subtle); border-color: var(--color-error-subtle); }
+  .manage-icon-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+  .manage-icon-btn svg { width: 15px; height: 15px; }
+
+  /* ── Manage Item Inline Edit / Delete Confirmation ── */
+  .manage-edit-wrap { flex: 1; min-width: 0; display: none; }
+  .manage-edit-wrap.open { display: block; }
+  .manage-edit-input { width: 100%; padding: var(--space-1) var(--space-3); border: 1.5px solid var(--color-primary); border-radius: var(--radius-sm); font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); color: var(--color-text-primary); background: var(--color-bg-elevated); outline: none; box-shadow: 0 0 0 3px var(--color-primary-subtle); }
+  .manage-edit-error { font-size: var(--font-size-xs); color: var(--color-error); margin-top: 2px; display: none; }
+  .manage-edit-error.visible { display: block; }
+  .manage-edit-actions { display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-1); }
+  .manage-edit-save { padding: var(--space-1) var(--space-3); background: var(--color-primary); border: none; border-radius: var(--radius-sm); color: var(--color-text-inverse, #fff); font-size: var(--font-size-xs); font-weight: var(--font-weight-semibold); cursor: pointer; }
+  .manage-edit-save:hover { opacity: 0.9; }
+  .manage-edit-cancel { background: none; border: none; color: var(--color-text-tertiary); font-size: var(--font-size-xs); cursor: pointer; padding: var(--space-1); }
+  .manage-edit-cancel:hover { color: var(--color-text-primary); }
+  .manage-confirm { flex: 1; display: none; align-items: center; gap: var(--space-2); }
+  .manage-confirm.open { display: flex; }
+  .manage-confirm-text { font-size: var(--font-size-xs); color: var(--color-error); font-weight: var(--font-weight-semibold); flex-shrink: 0; }
+  .manage-confirm-delete { padding: var(--space-1) var(--space-3); background: var(--color-error); border: none; border-radius: var(--radius-sm); color: var(--color-text-inverse, #fff); font-size: var(--font-size-xs); font-weight: var(--font-weight-semibold); cursor: pointer; }
+  .manage-confirm-delete:hover { opacity: 0.85; }
+  .manage-confirm-cancel { background: none; border: none; color: var(--color-text-tertiary); font-size: var(--font-size-xs); cursor: pointer; }
+  .manage-confirm-cancel:hover { color: var(--color-text-primary); }
+  .manage-item.editing .manage-name-wrap { display: none; }
+  .manage-item.editing .manage-badge { display: none; }
+  .manage-item.editing .manage-btns { display: none; }
+  .manage-item.editing .manage-edit-wrap { display: block; flex: 1; min-width: 0; }
+  .manage-item.editing .manage-confirm { display: none; }
+  .manage-item.deleting .manage-name-wrap { display: none; }
+  .manage-item.deleting .manage-badge { display: none; }
+  .manage-item.deleting .manage-btns { display: none; }
+  .manage-item.deleting .manage-edit-wrap { display: none; }
+  .manage-item.deleting .manage-confirm { display: flex; flex: 1; align-items: center; gap: var(--space-2); }
+
+  /* ── Pagination ── */
+  .pagination { display: flex; align-items: center; justify-content: space-between; padding: var(--space-3) var(--space-4); border-top: 1px solid var(--color-divider, var(--color-border)); font-size: var(--font-size-xs); color: var(--color-text-secondary); }
+  .pagination-btns { display: flex; gap: var(--space-1); }
+  .pagination-btn { padding: var(--space-1) var(--space-3); border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-bg-elevated); color: var(--color-text-primary); font-size: var(--font-size-xs); font-weight: var(--font-weight-medium); cursor: pointer; transition: all var(--duration-fast) var(--ease-out); }
+  .pagination-btn:hover { background: var(--color-bg-subtle); border-color: var(--color-border-strong); }
+  .pagination-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .pagination-btn.active { background: var(--color-primary); color: var(--color-text-inverse); border-color: var(--color-primary); }
+
+  /* ── Mobile Watchlist Drawer ── */
+  .watchlist-side-tab { display: none; }
+  .watchlist-drawer-backdrop { display: none; }
+
+  /* ── Responsive ── */
+  @media (max-width: 900px) {
+    .two-col { grid-template-columns: 1fr; }
+    .stats-row { grid-template-columns: repeat(2, 1fr); }
+    .stat-card:first-child { grid-column: 1 / -1; border-right: none; border-bottom: 1px solid var(--color-divider); }
+    .stat-card:nth-child(2) { border-right: 1px solid var(--color-divider); }
+    .right-col { position: fixed; top: 0; right: -340px; width: 320px; height: 100vh; z-index: 1000; transition: right 0.3s var(--ease-out); background: var(--color-bg-elevated); box-shadow: -2px 0 8px rgba(0, 0, 0, 0.1); padding: var(--space-4); overflow-y: auto; }
+    .right-col.open { right: 0; }
+    .watchlist-side-tab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-1); position: fixed; right: 0; top: 50%; transform: translateY(-50%); z-index: 998; width: 38px; padding: var(--space-3) var(--space-1); background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-right: none; border-radius: var(--radius-md) 0 0 var(--radius-md); box-shadow: -2px 0 8px rgba(0,0,0,0.08); cursor: pointer; transition: background var(--duration-fast) var(--ease-out); }
+    .watchlist-side-tab:hover { background: var(--color-bg-subtle); }
+    .watchlist-side-tab:active { transform: translateY(-50%) scale(0.96); }
+    .watchlist-side-tab svg { width: 18px; height: 18px; color: var(--color-text-secondary); }
+    .watchlist-side-tab span { writing-mode: vertical-rl; text-orientation: mixed; font-size: 10px; font-weight: var(--font-weight-semibold); color: var(--color-text-tertiary); letter-spacing: var(--letter-spacing-wide); text-transform: uppercase; line-height: 1; }
+    .watchlist-drawer-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.3); z-index: 999; }
+    .watchlist-drawer-backdrop.open { display: block; }
+  }
+  @media (max-width: 767px) {
+    .screen { padding-left: var(--space-4); padding-right: var(--space-4); }
+    .page-header { flex-direction: column; gap: var(--space-3); }
+    .page-header-actions { width: 100%; }
+    .page-header-actions .btn { flex: 1; }
+    .stats-row { grid-template-columns: repeat(2, 1fr); gap: var(--space-2); }
+    .stat-card { padding: var(--space-3); gap: var(--space-3); }
+    .stat-icon { width: 36px; height: 36px; }
+    .stat-icon svg { width: 18px; height: 18px; }
+    .stat-content h3 { font-size: var(--font-size-xl); }
+    .stat-content p { font-size: var(--font-size-xs); }
+  }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; } }
+
+  /* Tokens live in css/styles.css (:root, global Terminal Precision) —
+     no per-screen pinning. */
+  /* Header: tighter title, mono actions */
+  .page-header { padding: var(--space-4) 0; margin-bottom: var(--space-4); }
+  .page-header-text h1 { font-size: var(--font-size-2xl); font-weight: var(--font-weight-bold); }
+  .page-header-text p { font-size: var(--font-size-sm); }
+  .btn { font-family: var(--font-mono); font-size: 12px; }
+  .btn:active { transform: translate(1px, 1px); }
+  /* Stats: joined console grid, uniform cards */
+  .stats-row { grid-template-columns: repeat(3, 1fr); gap: 0; border: 1px solid var(--color-border); border-radius: var(--radius-md); overflow: hidden; background: var(--color-bg-elevated); margin-bottom: var(--space-4); }
+  .stat-card { border: none; border-right: 1px solid var(--color-divider); border-radius: 0; padding: var(--space-4); gap: var(--space-3); }
+  .stat-card:last-child { border-right: none; }
+  .stat-card:hover { box-shadow: none; background: var(--color-bg-inset); }
+  .stat-icon { width: 36px; height: 36px; border-radius: var(--radius-sm); background: var(--color-bg-inset); border: 1px solid var(--color-divider); color: var(--color-text-secondary); }
+  .stat-icon svg { width: 18px; height: 18px; }
+  .stat-icon.primary, .stat-icon.success, .stat-icon.error, .stat-icon.info { background: var(--color-bg-inset); border: 1px solid var(--color-divider); color: var(--color-text-secondary); }
+  .stat-content h3 { font-size: var(--font-size-xl); }
+  .stat-content p { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; }
+  .stat-card.triggered { background: var(--color-error-subtle); }
+  .stat-card.triggered:hover { background: var(--color-error-subtle); }
+  /* Layout: tighter rhythm */
+  .two-col { gap: var(--space-4); }
+  .left-col { gap: var(--space-4); }
+  .card { border-radius: var(--radius-md); }
+  .card-header { padding: var(--space-4) var(--space-5) var(--space-2); }
+  .card-header h2 { font-family: var(--font-mono); font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-text-secondary); }
+  /* Table: dense console */
+  .alert-table { font-size: 13px; }
+  .alert-table th { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.1em; padding: var(--space-2) var(--space-3); background: var(--color-bg-inset); }
+  .alert-table th.sorted .sort-arrow { color: var(--color-text-primary); }
+  .alert-table td { padding: var(--space-2) var(--space-3); }
+  .alert-table tbody tr:hover { background: var(--color-bg-inset); }
+  .ticker-badge, .type-badge { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.06em; border-radius: 4px; }
+  .ticker-badge { background: var(--color-bg-inset); border: 1px solid var(--color-divider); }
+  .type-badge.price { background: var(--color-bg-inset); border: 1px solid var(--color-border); color: var(--color-text-secondary); }
+  .condition-text, .price-mono { font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; }
+  .action-btn:active { transform: translate(1px, 1px); }
+  /* Form: mono labels, inset inputs, hard-shadow focus */
+  .form-label { font-family: var(--font-mono); font-size: 10px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-text-secondary); }
+  .form-input, .form-select { background: var(--color-bg-inset); font-size: 13px; }
+  .form-input { font-family: var(--font-mono); }
+  .form-input:focus, .form-select:focus { border-color: var(--color-text-primary); box-shadow: 2px 2px 0 var(--color-text-primary); }
+  /* Modal template: calm entrance */
+  .modal-card { animation: modal-enter var(--duration-normal) var(--ease-out); }
+  @keyframes modal-enter { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+  .modal-header { padding: var(--space-4) var(--space-5); }
+  .modal-body { padding: var(--space-5); }
+  @media (max-width: 767px) {
+    .stats-row { grid-template-columns: repeat(2, 1fr); }
+    .stat-card:first-child { grid-column: 1 / -1; border-right: none; border-bottom: 1px solid var(--color-divider); }
+    .stat-card:nth-child(2) { border-right: 1px solid var(--color-divider); }
+    .form-input, .form-select, .btn { min-height: 44px; }
+  }
+</style>
+
+<div class="screen" id="alerts-screen">
+  <header class="page-header">
+    <div class="page-header-text">
+      <h1>Alerts &amp; Watchlists</h1>
+      <p>Monitor price levels, volume spikes, and S/R patterns</p>
+    </div>
+    <div class="page-header-actions">
+      <button class="btn btn-ghost" id="refreshBtn" aria-label="Refresh alerts data">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+        Refresh
+      </button>
+      <button class="btn btn-primary" id="createAlertBtn" aria-label="Create new alert">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        Create Alert
+      </button>
+    </div>
+  </header>
+
+  <!-- Error Banner -->
+  <div class="error-banner" id="errorBanner" role="alert" aria-live="assertive">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+    <span id="errorBannerMsg">Unable to load alerts — server connection failed</span>
+    <button id="retryBtn" aria-label="Retry loading alerts">Retry</button>
+  </div>
+
+  <!-- Loading State -->
+  <div class="loading-state" id="loadingState" aria-label="Loading alerts" aria-busy="true">
+    <div class="stats-row">
+      <div class="skeleton skeleton-stat"></div>
+      <div class="skeleton skeleton-stat"></div>
+      <div class="skeleton skeleton-stat"></div>
+      <div class="skeleton skeleton-stat"></div>
+    </div>
+    <div class="skeleton skeleton-row" style="width:100%"></div>
+    <div class="skeleton skeleton-row" style="width:95%"></div>
+    <div class="skeleton skeleton-row" style="width:90%"></div>
+    <div class="skeleton skeleton-row" style="width:97%"></div>
+    <div class="skeleton skeleton-row" style="width:88%"></div>
+  </div>
+
+  <!-- Stats Row -->
+  <div class="stats-row hidden" id="statsRow" aria-label="Alert statistics">
+    <div class="stat-card">
+      <div class="stat-icon primary" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+        <span class="stat-badge" id="statTotalBadge"></span>
+      </div>
+      <div class="stat-content"><h3 id="statTotal">0</h3><p>All configured alerts</p></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon success" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><polyline points="9 12 11 14 15 10"></polyline></svg>
+      </div>
+      <div class="stat-content"><h3 id="statArmed">0</h3><p>Alerts armed</p></div>
+    </div>
+    <div class="stat-card" id="statFiredCard">
+      <div class="stat-icon error" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+      </div>
+      <div class="stat-content"><h3 id="statFired">0</h3><p>Alerts fired today</p></div>
+    </div>
+  </div>
+
+  <!-- Two-Column Layout -->
+  <div class="two-col" id="mainContent" style="display:none;">
+    <div class="left-col">
+      <!-- Alert Table -->
+      <div class="card" id="alertTableCard">
+        <div class="alert-table-wrap">
+          <table class="alert-table" role="grid" aria-label="Alert management table">
+            <thead>
+              <tr>
+                <th scope="col" data-sort="status">Status <span class="sort-arrow">&#9650;</span></th>
+                <th scope="col" data-sort="ticker">Ticker <span class="sort-arrow">&#9650;</span></th>
+                <th scope="col" data-sort="type">Type <span class="sort-arrow">&#9650;</span></th>
+                <th scope="col" data-sort="condition">Condition <span class="sort-arrow">&#9650;</span></th>
+                <th scope="col" class="text-right" data-sort="price">Current Price <span class="sort-arrow">&#9650;</span></th>
+                <th scope="col" data-sort="created">Created <span class="sort-arrow">&#9650;</span></th>
+                <th scope="col" data-sort="triggered">Last Triggered <span class="sort-arrow">&#9650;</span></th>
+                <th scope="col" class="text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="alertTableBody"></tbody>
+          </table>
+        </div>
+        <!-- Pagination -->
+        <div class="pagination" id="pagination">
+          <span id="paginationInfo">Showing 1-10 of 0 alerts</span>
+          <div class="pagination-btns" id="paginationBtns"></div>
+        </div>
+      </div>
+
+      <!-- Empty State -->
+      <div class="card">
+        <div class="empty-state" id="emptyState" aria-label="No alerts configured">
+          <div class="empty-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+          </div>
+          <h3>No alerts configured</h3>
+          <p>Set up price alerts, volume spikes, or S/R pattern detection to start monitoring</p>
+          <button class="btn btn-primary" id="emptyCreateBtn" aria-label="Create your first alert">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            Create Alert
+          </button>
+        </div>
+      </div>
+
+
+      <!-- Alert Creation Form -->
+      <div class="card form-card" id="createFormCard">
+        <div class="card-header"><h2>Create New Alert</h2></div>
+        <form class="form-body" id="alertForm" novalidate>
+          <div class="form-group">
+            <label class="form-label" for="tickerInput">Ticker Symbol</label>
+            <input class="form-input" type="text" id="tickerInput" placeholder="e.g. AAPL" maxlength="5" autocomplete="off" required aria-describedby="tickerHint tickerError">
+            <span class="form-hint" id="tickerHint">Enter a valid stock ticker (1-5 characters)</span>
+            <span class="form-error" id="tickerError" role="alert">Please enter a valid ticker symbol</span>
+            <span class="form-company" id="tickerCompany" aria-live="polite"></span>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="alertType">Alert Type</label>
+            <select class="form-select" id="alertType" required aria-describedby="typeHint">
+              <option value="">Select type...</option>
+              <option value="price_above">Price Above</option>
+              <option value="price_below">Price Below</option>
+              <option value="vol_spike">Volume Spike</option>
+              <option value="sr_touch">S/R Pattern</option>
+            </select>
+            <span class="form-hint" id="typeHint">Choose the condition that triggers this alert</span>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="thresholdInput" id="thresholdLabel">Threshold Price ($)</label>
+            <input class="form-input" type="number" id="thresholdInput" step="0.01" min="0" placeholder="e.g. 200.00" required aria-describedby="thresholdHint thresholdError">
+            <span class="form-hint" id="thresholdHint">Enter the price level to monitor</span>
+            <span class="form-error" id="thresholdError" role="alert">Please enter a valid threshold</span>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="notesInput">Notes <span style="font-weight:var(--font-weight-regular);color:var(--color-text-tertiary)">(optional)</span></label>
+            <textarea class="form-textarea" id="notesInput" placeholder="Add context for this alert..." rows="3" aria-describedby="notesHint"></textarea>
+            <span class="form-hint" id="notesHint">Optional notes about why you're setting this alert</span>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              Create Alert
+            </button>
+            <button type="button" class="btn btn-ghost" id="cancelFormBtn">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div><!-- /left-col -->
+
+    <!-- Right Column -->
+    <div class="right-col" id="rightCol">
+      <!-- Watchlist Panel -->
+      <div class="card">
+        <div class="card-header">
+          <h2>Watchlists</h2>
+          <div style="display:flex;align-items:center;gap:var(--space-1)">
+            <button class="watchlist-action-btn" id="manageWLBtn" title="Manage watchlists" aria-label="Manage watchlists">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="watchlist-selector">
+          <select class="watchlist-select" id="watchlistSelect" aria-label="Select watchlist">
+          </select>
+          <button class="btn btn-primary" id="newWLBtn" aria-label="Create new watchlist">+ New</button>
+        </div>
+        <div class="watchlist-tickers-list" id="watchlistTickers">
+          <div class="ticker-list-header">
+            <span class="ticker-col-label">Ticker</span>
+            <span class="ticker-col-label">Price</span>
+            <span class="ticker-col-label">Change</span>
+            <span class="ticker-col-spacer"></span>
+          </div>
+        </div>
+        <div class="watchlist-add-area">
+          <div class="watchlist-search-wrap">
+            <div class="ticker-input-row">
+              <input type="text" class="watchlist-search-input" id="tickerSearchInput" placeholder="Add ticker..." autocomplete="off" spellcheck="false" maxlength="10" aria-label="Add ticker to watchlist" aria-describedby="wl-ticker-validation wl-ticker-info">
+              <div class="ticker-validation" id="wl-ticker-validation" role="status" aria-live="polite"></div>
+              <button class="btn-add-ticker" id="addTickerBtn" type="button" aria-label="Add validated ticker to watchlist">Add</button>
+            </div>
+            <div class="ticker-info-line" id="wl-ticker-info"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Alert Log -->
+      <div class="card">
+        <div class="card-header"><h2>Recent Activity</h2></div>
+        <div class="alert-log" role="log" aria-label="Recent alert activity" aria-live="polite" id="alertLog"></div>
+      </div>
+    </div><!-- /right-col -->
+  </div><!-- /two-col -->
+
+  <!-- Mobile Watchlist Side Tab -->
+  <button class="watchlist-side-tab" id="watchlistSideTab" aria-label="Open watchlist drawer">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18M3 6h18M3 18h18"></path></svg>
+    <span>Watchlist</span>
+  </button>
+  <div class="watchlist-drawer-backdrop" id="watchlistBackdrop"></div>
+
+  <!-- Confirm Delete Dialog -->
+  <div class="confirm-overlay" id="confirmOverlay" role="dialog" aria-labelledby="confirmTitle" aria-modal="true">
+    <div class="confirm-dialog">
+      <h3 id="confirmTitle">Delete Alert</h3>
+      <p id="confirmMessage">Are you sure you want to delete this alert? This action cannot be undone.</p>
+      <div class="confirm-actions">
+        <button class="btn btn-ghost" id="confirmCancelBtn">Cancel</button>
+        <button class="btn btn-primary btn-danger" id="confirmDeleteBtn">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Create Watchlist Modal -->
+  <div class="confirm-overlay" id="createWLModal" role="dialog" aria-labelledby="createWLTitle" aria-modal="true">
+    <div class="confirm-dialog">
+      <h3 id="createWLTitle">Create Watchlist</h3>
+      <p>Organize your tickers into groups for easier tracking.</p>
+      <div class="form-group" style="text-align:left;margin-bottom:var(--space-4)">
+        <label class="form-label" for="createWLInput">Watchlist name</label>
+        <input class="form-input" type="text" id="createWLInput" placeholder="e.g. Tech Stocks" maxlength="30" autocomplete="off">
+      </div>
+      <div class="confirm-actions">
+        <button class="btn btn-ghost" id="createWLCancelBtn">Cancel</button>
+        <button class="btn btn-primary" id="createWLSubmitBtn">Create</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Manage Watchlists Modal -->
+  <div class="wl-modal-overlay" id="manageWLModal" role="dialog" aria-labelledby="manageWLTitle" aria-modal="true">
+    <div class="wl-modal">
+      <button class="wl-modal-close" id="manageWLCloseX" aria-label="Close dialog">&times;</button>
+      <div class="wl-modal-title" id="manageWLTitle">Manage Watchlists</div>
+      <div class="wl-modal-desc">Rename or delete your watchlists.</div>
+      <div class="manage-list" id="manageWLList" role="list"></div>
+      <div class="wl-modal-actions">
+        <button class="wl-modal-btn" id="manageWLCloseBtn">Close</button>
+      </div>
+    </div>
+  </div>
+
+
+
+
+
+
+</div>

@@ -1,0 +1,54 @@
+# Version control
+.git
+.gitignore
+
+# Python
+venv/
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Environment and config
+.env
+.env.local
+*.log
+logs/
+
+# Docker
+docker-compose.yml
+docker-compose*.yml
+Dockerfile
+
+# Documentation
+*.md
+AGENTIC/
+reference/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing and coverage
+.pytest_cache/
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+
+# Data and database
+*.db
+*.sqlite
+*.sqlite3

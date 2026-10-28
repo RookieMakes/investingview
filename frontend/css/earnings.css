@@ -1,0 +1,167 @@
+/* Earnings-only styles. Shared chart-modal styles remain in its template. */
+#earnings-watchlist { max-width: 1440px; margin: 0 auto; color: var(--color-text-primary); }
+#earnings-watchlist * { box-sizing: border-box; }
+#earnings-watchlist [hidden] { display: none !important; }
+#earnings-watchlist button, #earnings-watchlist select, #earnings-watchlist input { font: inherit; }
+#earnings-watchlist button { cursor: pointer; }
+#earnings-watchlist button:disabled { opacity: .55; cursor: wait; }
+#earnings-watchlist :is(button, input, select, summary):focus-visible { outline: 2px solid var(--color-text-primary); outline-offset: 3px; }
+#earnings-watchlist .up { color: var(--color-stock-up); }
+#earnings-watchlist .down { color: var(--color-stock-down); }
+#earnings-watchlist .flat, #earnings-watchlist .missing { color: var(--color-text-secondary); }
+#earnings-watchlist .ew-header { display: flex; justify-content: space-between; align-items: center; gap: var(--space-6); margin-bottom: var(--space-6); }
+#earnings-watchlist .ew-eyebrow { display: flex; align-items: center; gap: var(--space-3); font-family: var(--font-mono); font-size: 10px; font-weight: var(--font-weight-semibold); letter-spacing: .12em; text-transform: uppercase; color: var(--color-text-secondary); }
+#earnings-watchlist .ew-eyebrow span { padding: var(--space-1) var(--space-2); border: 1px solid var(--color-border); border-radius: var(--radius-xs); letter-spacing: .06em; font-weight: var(--font-weight-semibold); }
+#earnings-watchlist h1 { font-family: var(--font-family); font-size: var(--font-size-xl); font-weight: var(--font-weight-bold); letter-spacing: -0.01em; line-height: var(--line-height-tight); margin: var(--space-2) 0 var(--space-1); }
+#earnings-watchlist .ew-subtitle { margin: 0; color: var(--color-text-secondary); font-family: var(--font-family); font-size: var(--font-size-sm); line-height: var(--line-height-normal); }
+#earnings-watchlist .ew-header-right { display: flex; align-items: flex-end; flex-direction: column; gap: var(--space-3); }
+#earnings-watchlist .ew-session { font-family: var(--font-mono); font-size: var(--font-size-xs); color: var(--color-text-secondary); line-height: var(--line-height-normal); }
+#earnings-watchlist .ew-refresh { padding: var(--space-2) var(--space-4); border: 1px solid var(--color-border-strong); border-radius: var(--radius-sm); background: var(--color-bg-elevated); color: var(--color-text-primary); font-family: var(--font-mono); font-size: 12px; font-weight: var(--font-weight-semibold); }
+#earnings-watchlist .ew-refresh:hover { background: var(--color-bg-inset); }
+#earnings-watchlist .ew-stats { display: grid; grid-template-columns: repeat(4, 1fr); border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-bg-elevated); margin-bottom: var(--space-4); overflow: hidden; }
+#earnings-watchlist .ew-stats > div { padding: var(--space-3) var(--space-4); border-right: 1px solid var(--color-divider); display: flex; flex-direction: column; gap: var(--space-2); }
+#earnings-watchlist .ew-stats > div:last-child { border-right: 0; }
+#earnings-watchlist .ew-stat-label { font-family: var(--font-mono); font-size: 10px; font-weight: var(--font-weight-semibold); letter-spacing: .12em; text-transform: uppercase; color: var(--color-text-tertiary); }
+#earnings-watchlist .ew-stats strong { font-family: var(--font-family); font-size: var(--font-size-lg); font-weight: var(--font-weight-bold); line-height: 1; font-variant-numeric: tabular-nums; }
+#earnings-watchlist .ew-stats small { font-family: var(--font-family); font-size: var(--font-size-xs); color: var(--color-text-tertiary); line-height: var(--line-height-normal); }
+#earnings-watchlist .ew-controls { display: flex; flex-direction: column; gap: var(--space-4); margin-bottom: var(--space-4); }
+#earnings-watchlist .ew-window-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+#earnings-watchlist .ew-control-label { font-family: var(--font-mono); font-size: 10px; font-weight: var(--font-weight-semibold); letter-spacing: .1em; text-transform: uppercase; color: var(--color-text-tertiary); margin-right: var(--space-2); }
+#earnings-watchlist [data-window] { padding: 7px var(--space-3); border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-bg-elevated); color: var(--color-text-secondary); font-family: var(--font-mono); font-size: var(--font-size-xs); font-weight: var(--font-weight-semibold); letter-spacing: .06em; }
+#earnings-watchlist [data-window][aria-pressed="true"] { color: var(--color-text-inverse); background: var(--color-text-primary); border-color: var(--color-text-primary); }
+#earnings-watchlist .ew-input-row { display: flex; gap: var(--space-3); }
+#earnings-watchlist .ew-input-row label { display: flex; flex-direction: column; gap: var(--space-2); font-family: var(--font-mono); font-size: 10px; font-weight: var(--font-weight-semibold); letter-spacing: .08em; text-transform: uppercase; color: var(--color-text-tertiary); }
+#earnings-watchlist .ew-search-label { flex: 1; }
+#earnings-watchlist .ew-input-row input { min-height: 38px; width: 100%; border: 1px solid var(--color-border); background: var(--color-bg-elevated); color: var(--color-text-primary); padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); font-family: var(--font-family); font-size: var(--font-size-sm); font-weight: var(--font-weight-regular); text-transform: none; letter-spacing: normal; }
+#earnings-watchlist .ew-field { position: relative; display: flex; flex-direction: column; gap: var(--space-2); flex: 1; min-width: 0; max-width: 220px; }
+#earnings-watchlist .ew-field-label { font-family: var(--font-mono); font-size: 10px; font-weight: var(--font-weight-semibold); letter-spacing: .08em; text-transform: uppercase; color: var(--color-text-tertiary); }
+#earnings-watchlist .ew-dropdown { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); width: 100%; min-width: 0; min-height: 38px; padding: var(--space-2) var(--space-3); border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-bg-elevated); color: var(--color-text-primary); font-family: var(--font-mono); font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); cursor: pointer; }
+#earnings-watchlist .ew-dropdown:hover { border-color: var(--color-text-tertiary); }
+#earnings-watchlist .ew-dropdown:focus { border-color: var(--color-text-primary); outline: none; box-shadow: 2px 2px 0 var(--color-text-primary); }
+#earnings-watchlist .ew-dropdown-value { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }
+#earnings-watchlist .ew-dropdown .chevron { width: 14px; height: 14px; flex-shrink: 0; color: var(--color-text-secondary); transition: transform var(--duration-fast); }
+#earnings-watchlist .ew-dropdown[aria-expanded="true"] .chevron { transform: rotate(180deg); }
+#earnings-watchlist .ew-menu { position: absolute; top: calc(100% + var(--space-1)); left: 0; right: 0; max-height: 280px; overflow-y: auto; background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-md); box-shadow: var(--shadow-lg); z-index: 300; padding: var(--space-1); }
+#earnings-watchlist .ew-menu[hidden] { display: none; }
+#earnings-watchlist .ew-option { display: flex; align-items: center; gap: var(--space-2); width: 100%; min-width: 0; min-height: 38px; padding: var(--space-2) var(--space-3); background: none; border: 0; border-radius: var(--radius-sm); color: var(--color-text-secondary); font-family: var(--font-mono); font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); text-align: left; cursor: pointer; }
+#earnings-watchlist .ew-option:hover { color: var(--color-text-primary); background: var(--color-bg-subtle); }
+#earnings-watchlist .ew-option[aria-selected="true"] { color: var(--color-text-primary); font-weight: var(--font-weight-bold); }
+#earnings-watchlist .ew-option-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#earnings-watchlist .ew-dropdown:focus-visible, #earnings-watchlist .ew-option:focus-visible { outline: 2px solid var(--color-text-primary); outline-offset: 2px; }
+#earnings-watchlist .ew-message { font-family: var(--font-family); font-size: var(--font-size-sm); color: var(--color-text-secondary); margin: 0 0 var(--space-3); }
+#earnings-watchlist .ew-message:empty { display: none; }
+#earnings-watchlist .ew-error { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); border: 1px solid var(--color-error); border-radius: var(--radius-md); background: var(--color-error-subtle); margin-bottom: var(--space-3); font-family: var(--font-family); font-size: var(--font-size-sm); }
+#earnings-watchlist .ew-error button, #earnings-watchlist .ew-empty button { padding: var(--space-2) var(--space-3); border: 1px solid var(--color-border-strong); border-radius: var(--radius-sm); background: var(--color-bg-elevated); color: var(--color-text-primary); font-family: var(--font-mono); font-size: 12px; font-weight: var(--font-weight-semibold); }
+#earnings-watchlist .ew-board { border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-bg-elevated); overflow: hidden; }
+#earnings-watchlist .ew-board[aria-busy="true"] { border-top-color: var(--color-text-secondary); }
+#earnings-watchlist .ew-table-wrap { overflow-x: auto; }
+#earnings-watchlist .ew-table { min-width: 960px; width: 100%; border-collapse: collapse; }
+#earnings-watchlist .ew-table th { background: var(--color-bg-inset); color: var(--color-text-secondary); font-family: var(--font-mono); font-size: 10px; font-weight: var(--font-weight-semibold); letter-spacing: .1em; text-transform: uppercase; text-align: left; padding: var(--space-2) var(--space-3); white-space: nowrap; border-bottom: 1px solid var(--color-border); }
+#earnings-watchlist .ew-table th span { display: block; text-transform: none; letter-spacing: 0; font-size: 10px; font-weight: var(--font-weight-medium); color: var(--color-text-tertiary); margin-top: var(--space-1); }
+#earnings-watchlist .ew-table td { padding: var(--space-2) var(--space-3); border-bottom: 1px solid var(--color-divider); vertical-align: middle; }
+#earnings-watchlist .ew-table tr:last-child td { border-bottom: none; }
+#earnings-watchlist .ew-table tbody tr { cursor: pointer; }
+#earnings-watchlist .ew-table tbody tr:hover { background: var(--color-bg-inset); }
+#earnings-watchlist .ew-ticker { display: block; border: 0; background: none; padding: 0; color: var(--color-text-primary); font-family: var(--font-mono); font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); letter-spacing: .02em; white-space: nowrap; }
+#earnings-watchlist .ew-ticker span { color: var(--color-text-tertiary); font-size: var(--font-size-xs); font-weight: var(--font-weight-regular); }
+#earnings-watchlist .ew-company { display: block; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--font-family); font-size: var(--font-size-xs); color: var(--color-text-tertiary); margin: var(--space-1) 0; line-height: var(--line-height-normal); }
+#earnings-watchlist .ew-sector-tag { display: inline-block; font-family: var(--font-mono); font-size: 10px; font-weight: var(--font-weight-medium); letter-spacing: .06em; text-transform: uppercase; color: var(--color-text-tertiary); background: var(--color-bg-subtle); border: 1px solid var(--color-border); border-radius: var(--radius-xs); padding: 1px 5px; margin-top: var(--space-1); }
+#earnings-watchlist .ew-earn-date { display: block; font-family: var(--font-family); font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); white-space: nowrap; font-variant-numeric: tabular-nums; }
+#earnings-watchlist .ew-earn-badge { display: inline-block; margin-top: var(--space-2); font-family: var(--font-mono); font-size: 10px; font-weight: var(--font-weight-semibold); letter-spacing: .06em; text-transform: uppercase; color: var(--color-text-secondary); white-space: nowrap; }
+#earnings-watchlist .ew-earn-badge.urgent { color: var(--color-error); background: var(--color-error-subtle); border-radius: var(--radius-xs); padding: 2px 6px; }
+#earnings-watchlist .ew-earn-badge.soon { color: var(--color-warning); background: var(--color-warning-subtle); border-radius: var(--radius-xs); padding: 2px 6px; }
+#earnings-watchlist .ew-earn-badge.far { color: var(--color-text-tertiary); background: var(--color-bg-subtle); border-radius: var(--radius-xs); padding: 2px 6px; }
+#earnings-watchlist .ew-score { display: flex; flex-direction: column; align-items: center; gap: var(--space-1); padding: 2px; border: none; background: none; width: 78px; font-family: var(--font-mono); font-size: var(--font-size-lg); font-weight: var(--font-weight-bold); line-height: 1; font-variant-numeric: tabular-nums; }
+#earnings-watchlist .ew-score small { font-family: var(--font-mono); font-size: 10px; font-weight: var(--font-weight-semibold); letter-spacing: .06em; text-transform: uppercase; color: var(--color-text-tertiary); white-space: nowrap; }
+#earnings-watchlist .ew-score-track { width: 60px; height: 4px; border-radius: 2px; background: var(--color-bg-subtle); overflow: hidden; }
+#earnings-watchlist .ew-score-track i { display: block; height: 100%; background: currentColor; }
+#earnings-watchlist .ew-heat { display: grid; grid-template-columns: repeat(10, 1fr); gap: var(--space-1); min-width: 217px; }
+#earnings-watchlist .ew-tile { display: flex; align-items: center; justify-content: center; width: 100%; height: 32px; border: 1px solid transparent; border-radius: var(--radius-xs); font-family: var(--font-mono); font-size: var(--font-size-xs); font-weight: var(--font-weight-medium); font-variant-numeric: tabular-nums; padding: 0; background: var(--color-bg-subtle); }
+#earnings-watchlist .ew-tile.up { background: var(--color-success-subtle); }
+#earnings-watchlist .ew-tile.down { background: var(--color-error-subtle); }
+#earnings-watchlist .ew-tile.level-2.up { background: color-mix(in srgb, var(--color-stock-up) 30%, var(--color-bg-elevated)); }
+#earnings-watchlist .ew-tile.level-2.down { background: color-mix(in srgb, var(--color-stock-down) 30%, var(--color-bg-elevated)); }
+#earnings-watchlist .ew-tile.level-3.up { background: var(--color-stock-up); color: var(--color-bg-elevated); }
+#earnings-watchlist .ew-tile.level-3.down { background: var(--color-stock-down); color: var(--color-bg-elevated); }
+#earnings-watchlist .ew-tile.missing { background: none; border: 1px dashed var(--color-border-strong); }
+#earnings-watchlist .ew-heat-dates { display: flex; justify-content: space-between; margin-top: var(--space-2); font-family: var(--font-mono); font-size: 10px; color: var(--color-text-secondary); }
+#earnings-watchlist .ew-number { font-family: var(--font-mono); font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); white-space: nowrap; font-variant-numeric: tabular-nums; }
+#earnings-watchlist .ew-number small { display: block; margin-top: var(--space-1); color: var(--color-text-tertiary); font-family: var(--font-mono); font-size: 10px; font-weight: var(--font-weight-medium); letter-spacing: .04em; }
+#earnings-watchlist .ew-latest { text-align: right; white-space: nowrap; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+#earnings-watchlist .ew-latest strong, #earnings-watchlist .ew-latest > span { display: block; margin-bottom: var(--space-1); }
+#earnings-watchlist .ew-latest strong { font-size: var(--font-size-base); font-weight: var(--font-weight-bold); }
+#earnings-watchlist .ew-latest > span { font-size: var(--font-size-xs); font-weight: var(--font-weight-semibold); }
+#earnings-watchlist .ew-freshness { font-family: var(--font-mono); font-size: 10px; font-weight: var(--font-weight-medium); color: var(--color-text-secondary); }
+#earnings-watchlist .ew-freshness.stale { color: var(--color-warning); }
+#earnings-watchlist .ew-table-footer { display: flex; justify-content: space-between; flex-wrap: wrap; gap: var(--space-2); padding: var(--space-3) var(--space-4); background: var(--color-bg-inset); border-top: 1px solid var(--color-border); font-family: var(--font-mono); font-size: var(--font-size-xs); color: var(--color-text-secondary); }
+#earnings-watchlist .ew-empty { text-align: center; padding: var(--space-10) var(--space-4) !important; color: var(--color-text-secondary); font-family: var(--font-family); font-size: var(--font-size-sm); }
+#earnings-watchlist .ew-empty button { margin-left: var(--space-3); }
+#earnings-watchlist .ew-legend { display: flex; align-items: center; gap: var(--space-4); flex-wrap: wrap; margin: var(--space-4) 0; font-family: var(--font-family); font-size: var(--font-size-xs); color: var(--color-text-secondary); }
+#earnings-watchlist .ew-legend > span { display: flex; align-items: center; gap: 5px; }
+#earnings-watchlist .ew-legend i { display: inline-flex; align-items: center; justify-content: center; width: 17px; height: 17px; font-family: var(--font-mono); font-size: var(--font-size-xs); border-radius: var(--radius-xs); background: var(--color-bg-subtle); }
+#earnings-watchlist .ew-legend i.up { background: var(--color-success-subtle); }
+#earnings-watchlist .ew-legend i.down { background: var(--color-error-subtle); }
+#earnings-watchlist .ew-legend i.missing { border: 1px dashed var(--color-border-strong); }
+#earnings-watchlist .ew-method { border-top: 1px solid var(--color-divider); border-bottom: 1px solid var(--color-divider); padding: var(--space-4) 0; }
+#earnings-watchlist .ew-method summary { cursor: pointer; font-family: var(--font-mono); font-size: var(--font-size-xs); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); }
+#earnings-watchlist .ew-method summary span { color: var(--color-text-secondary); margin-left: var(--space-3); font-weight: var(--font-weight-medium); }
+#earnings-watchlist .ew-method p { font-family: var(--font-family); font-size: var(--font-size-sm); color: var(--color-text-secondary); line-height: 1.6; margin: var(--space-3) 0 0; max-width: 65ch; }
+#earnings-watchlist .ew-data-footer { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-3) var(--space-6); color: var(--color-text-secondary); font-family: var(--font-mono); font-size: var(--font-size-xs); margin-top: var(--space-4); line-height: 1.6; }
+#earnings-watchlist .ew-mobile { display: none; }
+#earnings-watchlist dialog { max-width: 480px; width: calc(100% - 32px); margin: auto; max-height: 85vh; overflow: auto; border: 1px solid var(--color-border-strong); border-radius: var(--radius-lg); padding: var(--space-5); color: var(--color-text-primary); background: var(--color-bg-elevated); box-shadow: var(--shadow-xl); }
+#earnings-watchlist dialog::backdrop { background: rgba(0, 0, 0, .45); }
+#earnings-watchlist .ew-dialog-header { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); margin-bottom: var(--space-4); }
+#earnings-watchlist .ew-dialog-header h2 { font-family: var(--font-family); font-size: var(--font-size-lg); font-weight: var(--font-weight-semibold); letter-spacing: -0.01em; margin: 0; }
+#earnings-watchlist .ew-dialog-header button { width: 36px; height: 36px; border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-bg-subtle); color: var(--color-text-primary); font-size: 18px; line-height: 1; }
+#earnings-watchlist .ew-breakdown { margin: 0; }
+#earnings-watchlist .ew-breakdown > div { display: flex; justify-content: space-between; gap: var(--space-4); padding: var(--space-3) 0; border-bottom: 1px solid var(--color-divider); font-family: var(--font-family); font-size: var(--font-size-sm); }
+#earnings-watchlist .ew-breakdown dt small { display: block; font-family: var(--font-family); font-size: var(--font-size-xs); color: var(--color-text-tertiary); margin-top: var(--space-1); }
+#earnings-watchlist .ew-breakdown dd { font-family: var(--font-mono); font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); font-variant-numeric: tabular-nums; margin: 0; }
+#earnings-watchlist #ew-dialog-body p { font-family: var(--font-family); font-size: var(--font-size-sm); line-height: 1.6; color: var(--color-text-secondary); margin: var(--space-4) 0 0; }
+@media (max-width: 1000px) {
+  #earnings-watchlist .ew-stats > div { padding: var(--space-4) var(--space-3); }
+  #earnings-watchlist .ew-input-row { flex-wrap: wrap; }
+  #earnings-watchlist .ew-search-label { flex-basis: 100%; }
+  #earnings-watchlist .ew-input-row > .ew-field { flex: 1; min-width: 0; max-width: none; }
+}
+@media (max-width: 767px) {
+  #earnings-watchlist .ew-header { flex-direction: column; align-items: stretch; gap: var(--space-4); margin-bottom: var(--space-4); }
+  #earnings-watchlist .ew-header-right { flex-direction: row; align-items: center; justify-content: space-between; gap: var(--space-3); }
+  #earnings-watchlist .ew-session { font-size: 10px; max-width: 180px; line-height: 1.6; }
+  #earnings-watchlist .ew-refresh { font-size: var(--font-size-xs); font-weight: var(--font-weight-semibold); min-height: 44px; white-space: nowrap; }
+  #earnings-watchlist .ew-stats { grid-template-columns: 1fr 1fr; margin-bottom: var(--space-4); }
+  #earnings-watchlist .ew-stats > div { padding: var(--space-4); }
+  #earnings-watchlist .ew-stats > div:nth-child(2) { border-right: 0; }
+  #earnings-watchlist .ew-stats > div:nth-child(-n+2) { border-bottom: 1px solid var(--color-divider); }
+  #earnings-watchlist .ew-stats strong { font-size: var(--font-size-lg); }
+  #earnings-watchlist .ew-stats small { font-size: var(--font-size-xs); line-height: var(--line-height-normal); }
+  #earnings-watchlist .ew-control-label { flex-basis: 100%; margin-bottom: var(--space-1); }
+  #earnings-watchlist [data-window] { min-height: 40px; padding: var(--space-2) var(--space-3); }
+  #earnings-watchlist .ew-input-row { gap: var(--space-3); }
+  #earnings-watchlist .ew-input-row > .ew-field { flex-basis: calc(50% - 12px); }
+  #earnings-watchlist .ew-input-row input { min-height: 44px; font-size: 16px; }
+  #earnings-watchlist .ew-dropdown, #earnings-watchlist .ew-option { min-height: 44px; }
+  #earnings-watchlist .ew-table-wrap { display: none; }
+  #earnings-watchlist .ew-mobile { display: block; }
+  #earnings-watchlist .ew-board { background: transparent; border: 0; }
+  #earnings-watchlist .ew-card { border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-4); background: var(--color-bg-elevated); margin-bottom: var(--space-3); }
+  #earnings-watchlist .ew-card-heading { display: flex; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-3); }
+  #earnings-watchlist .ew-card-earnings { text-align: right; }
+  #earnings-watchlist .ew-card .ew-sector-tag { display: none; }
+  #earnings-watchlist .ew-card-inline-price { display: flex; align-items: baseline; gap: var(--space-2); margin-top: 2px; font-family: var(--font-mono); font-size: var(--font-size-xs); color: var(--color-text-secondary); font-variant-numeric: tabular-nums; }
+  #earnings-watchlist .ew-card-inline-price strong { font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); }
+  #earnings-watchlist .ew-card-inline-price.up { color: var(--color-stock-up); }
+  #earnings-watchlist .ew-card-inline-price.down { color: var(--color-stock-down); }
+  #earnings-watchlist .ew-ticker { min-height: 44px; font-size: var(--font-size-base); }
+  #earnings-watchlist .ew-heat { min-width: 0; gap: var(--space-1); }
+  #earnings-watchlist .ew-tile { height: 34px; }
+  #earnings-watchlist .ew-card-metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-2); margin: var(--space-4) 0 0; }
+  #earnings-watchlist .ew-card-metrics > div { display: flex; flex-direction: column; align-items: center; gap: var(--space-2); }
+  #earnings-watchlist .ew-card-metrics > div > span { font-family: var(--font-mono); font-size: 10px; font-weight: var(--font-weight-semibold); letter-spacing: .08em; text-transform: uppercase; color: var(--color-text-tertiary); }
+  #earnings-watchlist .ew-card-metrics strong { font-family: var(--font-mono); font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); font-variant-numeric: tabular-nums; }
+  #earnings-watchlist .ew-score { font-size: var(--font-size-lg); min-height: 44px; }
+  #earnings-watchlist .ew-table-footer { border: 0; background: transparent; padding: var(--space-2) 0; line-height: 1.6; }
+  #earnings-watchlist .ew-method summary { line-height: 1.6; }
+  #earnings-watchlist .ew-method summary span { display: block; margin: var(--space-1) 0 0 var(--space-4); }
+  #earnings-watchlist .ew-data-footer { flex-direction: column; gap: var(--space-2); }
+}

@@ -1,0 +1,1368 @@
+<!-- ═══════════════════════════════════════════════════════════
+     Transactions Screen — Realized Profit Tracking & Trade Ledger
+     Loaded by App.loadScreen('transactions') into #content
+     Matches UX mockup: AGENTIC/design/screens/transactions.html
+     ═══════════════════════════════════════════════════════════ -->
+
+<style>
+  /* ─── TRANSACTION-SPECIFIC TOKENS (Direction B: buy/sell remapped to
+     stock up/down semantics; subtle/muted tints follow suit) ─── */
+  :root {
+    --color-buy: #0E7A3D;
+    --color-buy-subtle: rgba(14, 122, 61, 0.08);
+    --color-buy-muted: rgba(14, 122, 61, 0.15);
+    --color-sell: #C81E1E;
+    --color-sell-subtle: rgba(200, 30, 30, 0.08);
+    --color-sell-muted: rgba(200, 30, 30, 0.15);
+    --color-stock-neutral: #8E8E93;
+    --color-total-up: #34C77B;
+    --color-total-down: #F25555;
+  }
+
+  [data-theme="dark"] {
+    --color-buy: #34C77B;
+    --color-buy-subtle: rgba(52, 199, 123, 0.12);
+    --color-buy-muted: rgba(52, 199, 123, 0.2);
+    --color-sell: #F25555;
+    --color-sell-subtle: rgba(242, 85, 85, 0.12);
+    --color-sell-muted: rgba(242, 85, 85, 0.2);
+    --color-total-up: #0E7A3D;
+    --color-total-down: #C81E1E;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --color-buy: #34C77B;
+      --color-buy-subtle: rgba(52, 199, 123, 0.12);
+      --color-buy-muted: rgba(52, 199, 123, 0.2);
+      --color-sell: #F25555;
+      --color-sell-subtle: rgba(242, 85, 85, 0.12);
+      --color-sell-muted: rgba(242, 85, 85, 0.2);
+      --color-total-up: #0E7A3D;
+      --color-total-down: #C81E1E;
+    }
+  }
+
+  /* ─── PAGE HEADER ─── */
+  .page-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: var(--space-5); flex-wrap: wrap; gap: var(--space-3);
+  }
+  .page-title-group { display: flex; align-items: center; gap: var(--space-4); }
+  .page-title {
+    font-size: var(--font-size-2xl); font-weight: var(--font-weight-bold);
+    color: var(--color-text-primary); letter-spacing: -0.02em;
+  }
+  .page-subtitle {
+    font-size: var(--font-size-sm); color: var(--color-text-secondary);
+    font-weight: var(--font-weight-medium);
+  }
+  .page-meta {
+    display: flex; align-items: center; gap: var(--space-3);
+    font-size: var(--font-size-sm); color: var(--color-text-secondary);
+  }
+
+  /* ─── PORTFOLIO TABS ─── */
+  .portfolio-tabs {
+    display: flex; align-items: center; gap: var(--space-2);
+    margin-bottom: var(--space-6); padding-bottom: var(--space-1);
+    position: sticky; top: var(--nav-height); z-index: 100;
+    background: var(--color-bg); padding-top: var(--space-2); overflow: visible;
+  }
+  .portfolio-tabs-scroll {
+    display: flex; align-items: center; gap: var(--space-2);
+    overflow-x: auto; scrollbar-width: none; flex: 1; min-width: 0;
+  }
+  .portfolio-tabs-scroll::-webkit-scrollbar { display: none; }
+  .portfolio-tabs-dropdown {
+    display: none; width: 100%; height: 40px; padding: 0 var(--space-3);
+    background: var(--color-bg-elevated); border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm); font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium); color: var(--color-text-primary);
+    cursor: pointer; align-items: center; justify-content: space-between;
+    gap: var(--space-2); user-select: none;
+  }
+  .portfolio-tabs-dropdown:focus { border-color: var(--color-primary); outline: none; }
+  .portfolio-tabs-dropdown svg {
+    width: 14px; height: 14px; flex-shrink: 0; color: var(--color-text-secondary);
+    transition: transform var(--duration-fast);
+  }
+  .portfolio-dropdown-menu {
+    position: absolute; top: calc(100% + var(--space-1)); left: 0; right: 0;
+    max-height: 280px; overflow-y: auto; background: var(--color-bg-elevated);
+    border: 1px solid var(--color-border); border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg); z-index: 300; display: none; padding: var(--space-1);
+  }
+  .portfolio-dropdown-menu.open {
+    display: block; animation: dropdown-enter var(--duration-normal) var(--ease-out);
+  }
+  .portfolio-dropdown-option {
+    display: flex; align-items: center; gap: var(--space-3); width: 100%;
+    padding: var(--space-3); font-size: var(--font-size-sm); font-weight: var(--font-weight-medium);
+    color: var(--color-text-primary); border-radius: var(--radius-sm);
+    transition: background var(--duration-fast); text-align: left; cursor: pointer;
+    background: none; border: none;
+  }
+  .portfolio-dropdown-option:hover { background: var(--color-bg-subtle); }
+  .portfolio-dropdown-option.active { background: var(--color-primary-subtle); color: var(--color-primary); }
+  .portfolio-dropdown-option .option-name {
+    flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .portfolio-dropdown-option .option-currency {
+    font-size: var(--font-size-xs); font-weight: var(--font-weight-semibold);
+    padding: 1px 6px; border-radius: var(--radius-full); background: var(--color-bg-subtle);
+    color: var(--color-text-secondary); text-transform: uppercase; flex-shrink: 0;
+  }
+  .portfolio-dropdown-option.active .option-currency {
+    background: var(--color-primary-muted); color: var(--color-primary);
+  }
+  @keyframes dropdown-enter { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+
+  .portfolio-tab-group {
+    display: flex; align-items: center; gap: var(--space-2);
+    padding: 6px var(--space-3); font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium); color: var(--color-text-secondary);
+    background: var(--color-bg-elevated); border: 1px solid var(--color-border);
+    border-radius: var(--radius-full); white-space: nowrap;
+    transition: all var(--duration-normal) var(--ease-out);
+    cursor: pointer; user-select: none;
+  }
+  .portfolio-tab-group:hover {
+    background: var(--color-primary-subtle); border-color: var(--color-primary);
+    color: var(--color-primary);
+  }
+  .portfolio-tab-group[aria-selected="true"] {
+    background: var(--color-primary); border-color: var(--color-primary);
+    color: var(--color-text-inverse);
+  }
+  .portfolio-tab-group[aria-selected="true"] .tab-currency {
+    background: rgba(255,255,255,0.2); color: var(--color-text-inverse);
+  }
+  .portfolio-tab-group[aria-selected="true"] .tab-drag {
+    color: rgba(255,255,255,0.6);
+  }
+  .tab-drag {
+    cursor: grab; color: var(--color-text-tertiary); display: inline-flex;
+    font-size: 14px; line-height: 1;
+  }
+  .tab-currency {
+    font-size: var(--font-size-xs); font-weight: var(--font-weight-semibold);
+    padding: 1px 6px; border-radius: var(--radius-full); background: var(--color-bg-subtle);
+    color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: 0.3px;
+  }
+
+  /* ─── STATS BAR ─── */
+  .stats-bar {
+    display: flex; align-items: center; gap: var(--space-6);
+    padding: var(--space-3) var(--space-5); background: var(--color-bg-elevated);
+    border: 1px solid var(--color-border); border-radius: var(--radius-md);
+    margin-bottom: var(--space-5); overflow-x: auto; white-space: nowrap;
+  }
+  .stats-bar-item { display: flex; flex-direction: column; gap: 2px; }
+  .stats-bar-label {
+    font-size: var(--font-size-xs); color: var(--color-text-secondary);
+    font-weight: var(--font-weight-medium); text-transform: uppercase; letter-spacing: 0.4px;
+  }
+  .stats-bar-value {
+    font-size: var(--font-size-base); font-weight: var(--font-weight-semibold);
+    font-family: var(--font-mono); color: var(--color-text-primary);
+  }
+  .stats-bar-value.up { color: var(--color-stock-up); }
+  .stats-bar-value.down { color: var(--color-stock-down); }
+  .stats-bar-divider { width: 1px; height: 28px; background: var(--color-divider); flex-shrink: 0; }
+  /* Compact pct (mobile only) — hidden on desktop */
+  .stats-bar-value .pct-short { display: none; }
+
+  /* ─── YEAR HEATMAP (monthly realized P/L, per portfolio) ─── */
+  .year-heatmap {
+    padding: var(--space-3) var(--space-5); background: var(--color-bg-elevated);
+    border: 1px solid var(--color-border); border-radius: var(--radius-md);
+    margin-bottom: var(--space-5); font-family: var(--font-mono);
+  }
+  .year-heatmap-header {
+    display: flex; align-items: center; justify-content: center; gap: var(--space-3);
+    margin-bottom: var(--space-3);
+  }
+  .year-nav-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 28px; height: 28px; border-radius: var(--radius-sm);
+    color: var(--color-text-secondary); background: none; border: none; cursor: pointer;
+    transition: background var(--duration-fast), color var(--duration-fast);
+  }
+  .year-nav-btn:hover { background: var(--color-bg-inset); color: var(--color-text-primary); }
+  .year-nav-btn:active { transform: translate(1px, 1px); }
+  .year-nav-btn:disabled { opacity: 0.35; cursor: not-allowed; background: none; transform: none; }
+  .year-nav-btn:focus-visible { outline: none; box-shadow: 2px 2px 0 var(--color-text-primary); }
+  .year-nav-btn svg { width: 14px; height: 14px; }
+  .year-label {
+    font-size: var(--font-size-base); font-weight: var(--font-weight-semibold);
+    font-family: var(--font-mono);
+    color: var(--color-text-primary); font-variant-numeric: tabular-nums;
+    min-width: 4ch; text-align: center;
+  }  .year-heatmap-grid {
+    display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)) auto; gap: var(--space-2);
+  }
+  .ym-cell {
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    padding: var(--space-2) var(--space-1); border-radius: var(--radius-sm);
+    min-width: 0;
+  }
+  .ym-month {
+    font-size: 10px; font-weight: var(--font-weight-semibold);
+    color: var(--color-text-tertiary); text-transform: uppercase; letter-spacing: 0.08em;
+  }
+  .ym-value {
+    font-size: 12px; font-weight: var(--font-weight-semibold);
+    font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
+  }
+  .ym-cell.up { background: var(--color-buy-subtle); }
+  .ym-cell.up .ym-value { color: var(--color-buy); }
+  .ym-cell.down { background: var(--color-sell-subtle); }
+  .ym-cell.down .ym-value { color: var(--color-sell); }
+  .ym-cell.empty .ym-value { color: var(--color-text-tertiary); font-weight: var(--font-weight-medium); }
+  .ym-cell.future { opacity: 0.4; }
+  .ym-cell.future .ym-value { color: var(--color-text-tertiary); font-weight: var(--font-weight-medium); }
+  /* 13th TOTAL cell — hero inversion: solid primary fill, semantic value */
+  .ym-cell.total { background: var(--color-primary); padding-left: var(--space-3); padding-right: var(--space-3); }
+  .ym-cell.total .ym-month { color: var(--color-text-inverse); opacity: 0.65; }
+  .ym-cell.total.up .ym-value { color: var(--color-total-up); }
+  .ym-cell.total.down .ym-value { color: var(--color-total-down); }
+  .ym-cell.total.muted .ym-value { color: var(--color-text-inverse); opacity: 0.55; font-weight: var(--font-weight-medium); }
+
+  /* ─── TRADING DAYS: twelve month calendars, complete portfolio history ─── */
+  .trading-activity {
+    container-type: inline-size;
+    padding: var(--space-4) var(--space-5);
+    margin-bottom: var(--space-5);
+    background: var(--color-bg-elevated);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    min-width: 0;
+  }
+  .trading-activity .year-heatmap-header { margin-bottom: var(--space-1); }
+  .trading-activity-total {
+    text-align: center; color: var(--color-text-primary);
+    font: var(--font-weight-medium) var(--font-size-sm) var(--font-mono);
+    margin-bottom: var(--space-5);
+  }
+  .trading-activity-viewport {
+    position: relative; overflow-x: auto; overscroll-behavior-x: contain;
+    scrollbar-width: thin; scrollbar-color: var(--color-border-strong) transparent;
+    padding-block: var(--space-1) var(--space-3);
+  }
+  .trading-activity-months {
+    display: grid; grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: var(--space-3); width: 100%;
+  }
+  .trading-activity-month { position: relative; min-width: 0; scroll-snap-align: center; }
+  .trading-activity-month + .trading-activity-month::before {
+    content: ''; position: absolute; top: 0; bottom: 0; left: -7px;
+    width: 1px; background: var(--color-divider);
+  }
+  .trading-activity-month h3 {
+    color: var(--color-text-secondary); text-align: center;
+    font: var(--font-weight-semibold) 10px var(--font-mono);
+    text-transform: uppercase; letter-spacing: 0.08em; margin: 0 0 var(--space-1);
+  }
+  .trading-activity-month.current h3 { color: var(--color-text-primary); text-decoration: underline; text-underline-offset: 4px; }
+  .trading-activity-month-total {
+    text-align: center; color: var(--color-text-secondary);
+    font: var(--font-weight-medium) 10px var(--font-mono); margin-bottom: var(--space-3);
+  }
+  .trading-activity-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 3px; }
+  .trading-activity-weekday {
+    text-align: center; color: var(--color-text-tertiary);
+    font: var(--font-weight-medium) 8px var(--font-mono); padding-bottom: 3px;
+  }
+  .trading-activity-day {
+    display: block; width: 100%; min-width: 0; padding: 0; aspect-ratio: 1;
+    border: 1px solid var(--color-border); border-radius: 2px;
+    background: var(--color-bg-subtle); cursor: pointer;
+  }
+  .trading-activity-day.traded { background: var(--color-success); border-color: var(--color-success); }
+  .trading-activity-day.future {
+    background: var(--color-bg-elevated); border: 1px dashed var(--color-border-strong);
+  }
+  .trading-activity-day.today { outline: 1px solid var(--color-text-primary); outline-offset: 1px; }
+  .trading-activity-day:hover, .trading-activity-day:focus-visible {
+    outline: 2px solid var(--color-text-primary); outline-offset: 1px; opacity: 1;
+  }
+  .trading-activity-footer { margin-top: var(--space-3); text-align: center; }
+  .trading-activity-legend {
+    display: flex; justify-content: center; flex-wrap: wrap; gap: var(--space-4);
+    color: var(--color-text-secondary); font-size: var(--font-size-xs);
+  }
+  .trading-activity-legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .trading-activity-swatch {
+    display: inline-block; width: 10px; height: 10px; border-radius: 2px;
+    background: var(--color-bg-subtle); border: 1px solid var(--color-border);
+  }
+  .trading-activity-swatch.traded { background: var(--color-success); border-color: var(--color-success); }
+  .trading-activity-swatch.future {
+    background: var(--color-bg-elevated); border: 1px dashed var(--color-border-strong);
+  }
+  .trading-activity-detail {
+    min-height: 2.8em; margin: var(--space-2) 0 0; color: var(--color-text-secondary);
+    font-size: var(--font-size-xs); line-height: 1.4;
+  }
+  .trading-activity-retry {
+    margin: var(--space-2) auto; padding: var(--space-2) var(--space-3);
+    border: 1px solid var(--color-border); border-radius: var(--radius-sm);
+    background: var(--color-bg-subtle); color: var(--color-text-primary); cursor: pointer;
+  }
+  @container (max-width: 1019px) {
+    .trading-activity-viewport { scroll-snap-type: x proximity; }
+    .trading-activity-months {
+      grid-template-columns: repeat(12, 140px); width: max-content; gap: var(--space-4);
+      padding-inline: max(0px, calc((100cqw - 140px) / 2));
+    }
+    .trading-activity-month + .trading-activity-month::before { left: -9px; }
+    .trading-activity-weekday { font-size: 10px; }
+  }
+
+  /* ─── RANKING PANEL (Card wrapper — same as scanner) ─── */
+  .ranking-panel {
+    background: var(--color-bg-elevated); border: 1px solid var(--color-divider);
+    border-radius: var(--radius-md); overflow: hidden;
+    transition: box-shadow var(--duration-normal) var(--ease-out);
+    margin-bottom: var(--space-6);
+  }
+  .ranking-panel:hover { box-shadow: var(--shadow-sm); }
+  .panel-accent { height: 3px; width: 100%; }
+  .ranking-panel.profit .panel-accent { background: var(--color-success); }
+  .ranking-panel.ledger .panel-accent { background: var(--color-primary); }
+
+  .panel-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: var(--space-4) var(--space-5); border-bottom: 1px solid var(--color-divider);
+  }
+  .panel-title-group { display: flex; align-items: center; gap: var(--space-3); }
+  .panel-icon {
+    width: 32px; height: 32px; border-radius: var(--radius-sm);
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .panel-icon svg { width: 18px; height: 18px; }
+  .ranking-panel.profit .panel-icon { background: var(--color-success-subtle); color: var(--color-success); }
+  .ranking-panel.ledger .panel-icon { background: var(--color-primary-subtle); color: var(--color-primary); }
+  .panel-title {
+    font-size: var(--font-size-md); font-weight: var(--font-weight-semibold);
+    color: var(--color-text-primary);
+  }
+  .panel-subtitle {
+    font-size: var(--font-size-xs); color: var(--color-text-tertiary); margin-top: 1px;
+  }
+  .panel-count {
+    font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold);
+    color: var(--color-text-tertiary); font-family: var(--font-mono);
+  }
+
+  /* ─── RANKING TABLE (shared table pattern) ─── */
+  .ranking-table { width: 100%; font-size: var(--font-size-sm); }
+  .ranking-table thead th {
+    padding: var(--space-2) var(--space-4); text-align: left;
+    font-size: var(--font-size-xs); font-weight: var(--font-weight-semibold);
+    color: var(--color-text-tertiary); text-transform: uppercase; letter-spacing: 0.05em;
+    background: var(--color-bg-inset); border-bottom: 1px solid var(--color-divider);
+    user-select: none; white-space: nowrap; cursor: pointer;
+    transition: color var(--duration-fast);
+  }
+  .ranking-table thead th:hover { color: var(--color-text-secondary); }
+  .ranking-table thead th.text-right { text-align: right; }
+  .ranking-table thead th.text-center { text-align: center; }
+  .ranking-table thead th.sorted-asc::after { content: ' ▲'; font-size: 8px; }
+  .ranking-table thead th.sorted-desc::after { content: ' ▼'; font-size: 8px; }
+
+  .ranking-table tbody tr {
+    border-bottom: 1px solid var(--color-divider);
+    transition: background var(--duration-fast);
+  }
+  .ranking-table tbody tr:last-child { border-bottom: none; }
+  .ranking-table tbody tr:hover { background: var(--color-primary-subtle); }
+  .ranking-table tbody tr.buy-row { background: var(--color-buy-subtle); }
+  .ranking-table tbody tr.buy-row:hover { background: var(--color-buy-muted); }
+  .ranking-table tbody tr.sell-row { background: var(--color-sell-subtle); }
+  .ranking-table tbody tr.sell-row:hover { background: var(--color-sell-muted); }
+
+  .ranking-table td {
+    padding: var(--space-3) var(--space-4); vertical-align: middle; white-space: nowrap;
+  }
+  .ranking-table td.text-right { text-align: right; }
+  .ranking-table td.text-center { text-align: center; }
+
+  /* Ticker cell — mono bold */
+  .ticker-cell {
+    font-weight: var(--font-weight-bold); font-family: var(--font-mono);
+    color: var(--color-text-primary); font-size: var(--font-size-sm);
+  }
+  .ticker-cell a { color: inherit; text-decoration: none; transition: color var(--duration-fast); }
+  .ticker-cell a:hover { color: var(--color-primary); }
+  .company-name {
+    display: block; font-weight: var(--font-weight-regular); font-family: var(--font-family);
+    color: var(--color-text-secondary); font-size: var(--font-size-xs);
+    max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 1px;
+  }
+
+  /* P/L values */
+  .pnl-value { font-family: var(--font-mono); font-weight: var(--font-weight-semibold); }
+  .pnl-value.up { color: var(--color-stock-up); }
+  .pnl-value.down { color: var(--color-stock-down); }
+  .pnl-value.neutral { color: var(--color-text-secondary); }
+
+  /* Trade type badges */
+  .trade-badge {
+    display: inline-flex; align-items: center; padding: 2px 8px;
+    border-radius: var(--radius-full); font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-bold); letter-spacing: 0.03em; text-transform: uppercase;
+  }
+  .trade-badge.buy { background: var(--color-buy-subtle); color: var(--color-buy); }
+  .trade-badge.sell { background: var(--color-sell-subtle); color: var(--color-sell); }
+
+  /* Notes cell — truncated */
+  .notes-cell {
+    font-size: var(--font-size-xs); color: var(--color-text-secondary);
+    max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+
+  /* Edit action button */
+  .btn-edit {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 28px; height: 28px; border-radius: var(--radius-sm);
+    color: var(--color-text-tertiary); transition: all var(--duration-fast);
+    background: none; border: none; cursor: pointer;
+  }
+  .btn-edit:hover { background: var(--color-primary-subtle); color: var(--color-primary); }
+  .btn-edit:active { transform: scale(0.95); }
+  .btn-edit svg { width: 14px; height: 14px; }
+
+  /* Delete action button */
+  .btn-delete {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 28px; height: 28px; border-radius: var(--radius-sm);
+    color: var(--color-text-tertiary); transition: all var(--duration-fast);
+    background: none; border: none; cursor: pointer;
+  }
+  .btn-delete:hover { background: var(--color-danger-subtle); color: var(--color-danger); }
+  .btn-delete:active { transform: scale(0.95); }
+  .btn-delete svg { width: 14px; height: 14px; }
+
+  /* ─── MODAL ─── */
+  .modal-backdrop {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+    z-index: var(--z-modal); display: none; align-items: center; justify-content: center;
+    opacity: 0; transition: opacity var(--duration-normal) var(--ease-out);
+  }
+  .modal-backdrop.open { display: flex; opacity: 1; }
+  .modal-card {
+    background: var(--color-bg-elevated); border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-xl); width: 100%; max-height: 90vh; overflow-y: auto;
+    animation: modal-enter var(--duration-slow) var(--ease-spring);
+  }
+  @keyframes modal-enter { from { opacity: 0; transform: translateY(16px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+  .modal-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: var(--space-5) var(--space-6); border-bottom: 1px solid var(--color-divider);
+  }
+  .modal-title {
+    font-size: var(--font-size-lg); font-weight: var(--font-weight-semibold);
+    color: var(--color-text-primary);
+  }
+  .modal-close {
+    width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
+    border-radius: var(--radius-sm); color: var(--color-text-secondary);
+    transition: background var(--duration-fast);
+  }
+  .modal-close:hover { background: var(--color-bg-subtle); }
+  .modal-close svg { width: 18px; height: 18px; }
+  .modal-body { padding: var(--space-6); }
+
+  /* Edit modal specific */
+  .edit-modal .modal-card { max-width: 520px; }
+  .edit-field-group { margin-bottom: var(--space-5); }
+  .edit-field-label {
+    display: block; font-size: var(--font-size-xs); font-weight: var(--font-weight-semibold);
+    color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: 0.4px;
+    margin-bottom: var(--space-2);
+  }
+  .edit-field-value {
+    font-size: var(--font-size-sm); font-family: var(--font-mono);
+    color: var(--color-text-primary); padding: var(--space-2) 0;
+  }
+  .edit-field-value.readonly { color: var(--color-text-tertiary); }
+  .edit-input {
+    width: 100%; height: 40px; padding: 0 var(--space-3); background: var(--color-bg);
+    border: 1px solid var(--color-border); border-radius: var(--radius-sm);
+    font-size: var(--font-size-sm); color: var(--color-text-primary);
+    transition: border-color var(--duration-normal) var(--ease-out);
+  }
+  .edit-input:focus {
+    border-color: var(--color-primary); outline: none;
+    box-shadow: 0 0 0 3px var(--color-primary-subtle);
+  }
+  .edit-input.has-prefix { padding-left: var(--space-5); }
+  .date-wrap { position: relative; }
+  .date-display {
+    width: 100%; height: 40px; padding: 0 var(--space-3); background: var(--color-bg);
+    border: 1px solid var(--color-border); border-radius: var(--radius-sm);
+    font-size: var(--font-size-sm); color: var(--color-text-primary);
+    display: flex; align-items: center; cursor: pointer;
+    transition: border-color var(--duration-normal) var(--ease-out);
+  }
+  .date-display:hover { border-color: var(--color-border-strong); }
+  .date-display:focus-within { border-color: var(--color-primary); box-shadow: 0 0 0 3px var(--color-primary-subtle); }
+  .date-hidden {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    opacity: 0; pointer-events: none; border: none; margin: 0; padding: 0;
+  }
+  .trade-input-wrap { position: relative; display: flex; align-items: center; min-width: 0; }
+  .trade-input-prefix { position: absolute; left: var(--space-2); font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); color: var(--color-text-tertiary); pointer-events: none; }
+  .edit-textarea {
+    width: 100%; min-height: 100px; padding: var(--space-3); background: var(--color-bg);
+    border: 1px solid var(--color-border); border-radius: var(--radius-sm);
+    font-size: var(--font-size-sm); color: var(--color-text-primary); resize: vertical;
+    transition: border-color var(--duration-normal) var(--ease-out);
+  }
+  .edit-textarea:focus {
+    border-color: var(--color-primary); outline: none;
+    box-shadow: 0 0 0 3px var(--color-primary-subtle);
+  }
+  .edit-char-count {
+    font-size: var(--font-size-xs); color: var(--color-text-tertiary);
+    text-align: right; margin-top: var(--space-1);
+  }
+  .edit-readonly-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4);
+    padding: var(--space-4); background: var(--color-bg); border-radius: var(--radius-sm);
+    margin-bottom: var(--space-5);
+  }
+  .edit-readonly-item { display: flex; flex-direction: column; gap: 2px; }
+  .edit-readonly-label {
+    font-size: var(--font-size-xs); color: var(--color-text-tertiary);
+    text-transform: uppercase; letter-spacing: 0.3px;
+  }
+  .edit-readonly-value {
+    font-size: var(--font-size-sm); font-family: var(--font-mono);
+    font-weight: var(--font-weight-medium); color: var(--color-text-primary);
+  }
+  .edit-actions {
+    display: flex; justify-content: flex-end; gap: var(--space-3);
+    padding-top: var(--space-4); border-top: 1px solid var(--color-divider);
+  }
+  .btn-ghost {
+    display: inline-flex; align-items: center; gap: var(--space-2);
+    padding: var(--space-3) var(--space-5); background: transparent;
+    color: var(--color-text-secondary); font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-semibold); border-radius: var(--radius-sm);
+    border: 1px solid var(--color-border); transition: all var(--duration-fast); cursor: pointer;
+  }
+  .btn-ghost:hover { background: var(--color-bg-subtle); color: var(--color-text-primary); }
+  .btn-primary {
+    display: inline-flex; align-items: center; gap: var(--space-2);
+    padding: var(--space-3) var(--space-5); background: var(--color-primary);
+    color: var(--color-text-inverse); font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-semibold); border-radius: var(--radius-sm);
+    transition: all var(--duration-normal) var(--ease-out); border: none;
+  }
+  .btn-primary:hover { background: var(--color-primary-hover); }
+  .btn-primary:active { transform: scale(0.97); background: var(--color-primary-active); }
+
+  /* ─── ADD TRANSACTION BUTTON (header) ─── */
+  .add-transaction-btn {
+    flex-shrink: 0;
+  }
+
+  /* ─── ADD TRANSACTION FORM ─── */
+  .add-transaction-section {
+    display: none;
+    margin-bottom: var(--space-5);
+  }
+  .add-transaction-section.visible {
+    display: block;
+  }
+  .add-transaction-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    padding: var(--space-5);
+    background: var(--color-bg-elevated);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+  }
+  .add-tx-form-row {
+    display: flex;
+    gap: var(--space-3);
+    flex-wrap: nowrap;
+  }
+  .add-tx-form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1 1 0;
+    min-width: 0;
+    position: relative;
+  }
+  .add-tx-form-label {
+    font-size: var(--font-size-xs);
+    color: var(--color-text-secondary);
+    font-weight: var(--font-weight-medium);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+  }
+  .add-tx-input {
+    height: 36px;
+    padding: 0 var(--space-3);
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    font-size: var(--font-size-sm);
+    color: var(--color-text-primary);
+    transition: border-color var(--duration-normal) var(--ease-out);
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+  .add-tx-input:focus {
+    border-color: var(--color-primary);
+    outline: none;
+  }
+  .add-tx-input-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+    min-width: 0;
+  }
+  .add-tx-input-prefix {
+    position: absolute;
+    left: var(--space-2);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text-tertiary);
+    pointer-events: none;
+  }
+  .add-tx-input.has-prefix {
+    padding-left: var(--space-5);
+  }
+  .add-tx-date-display {
+    width: 100%; height: 36px; padding: 0 var(--space-3); background: var(--color-bg);
+    border: 1px solid var(--color-border); border-radius: var(--radius-sm);
+    font-size: var(--font-size-sm); color: var(--color-text-primary);
+    display: flex; align-items: center; cursor: pointer;
+    transition: border-color var(--duration-normal) var(--ease-out);
+    box-sizing: border-box;
+  }
+  .add-tx-date-display:hover { border-color: var(--color-border-strong); }
+  .add-tx-date-display:focus-within { border-color: var(--color-primary); outline: none; }
+  .add-tx-date-hidden {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    opacity: 0; pointer-events: none; border: none; margin: 0; padding: 0;
+  }
+  .add-tx-ticker-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-width: 0;
+  }
+  .add-tx-ticker-input {
+    width: 100%;
+  }
+  .add-tx-ticker-validation {
+    font-size: 15px;
+    flex-shrink: 0;
+    min-width: 18px;
+    text-align: center;
+  }
+  .add-tx-ticker-validation.valid { color: var(--color-success); }
+  .add-tx-ticker-validation.invalid { color: var(--color-error); }
+  .add-tx-ticker-validation.loading { color: var(--color-text-secondary); }
+  .add-tx-ticker-info {
+    font-size: var(--font-size-xs);
+    color: var(--color-text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-height: 16px;
+  }
+  .add-tx-type-toggle {
+    display: flex;
+    gap: 0;
+  }
+  .add-tx-type-btn {
+    height: 36px;
+    padding: 0 var(--space-5);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-semibold);
+    border-radius: 0;
+    transition: all var(--duration-fast);
+    cursor: pointer;
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+  .add-tx-type-btn:first-child {
+    border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+  }
+  .add-tx-type-btn:last-child {
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  }
+  .add-tx-type-btn.btn-buy {
+    background: transparent;
+    color: var(--color-success);
+    border: 1.5px solid var(--color-success);
+  }
+  .add-tx-type-btn.btn-buy.active {
+    background: var(--color-success);
+    color: var(--color-text-inverse);
+  }
+  .add-tx-type-btn.btn-sell {
+    background: transparent;
+    color: var(--color-error);
+    border: 1.5px solid var(--color-error);
+    border-left: 0;
+  }
+  .add-tx-type-btn.btn-sell.active {
+    background: var(--color-error);
+    color: var(--color-text-inverse);
+  }
+  .add-tx-submit-btn {
+    height: 36px;
+    padding: 0 var(--space-5);
+    background: var(--color-primary);
+    color: var(--color-text-inverse);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-semibold);
+    border-radius: var(--radius-sm);
+    transition: all var(--duration-fast);
+    border: none;
+    cursor: pointer;
+    white-space: nowrap;
+    margin-top: 14px;
+  }
+  .add-tx-submit-btn:hover { background: var(--color-primary-hover); }
+  .add-tx-submit-btn:active { transform: scale(0.97); }
+
+  @media (max-width: 767px) {
+    .add-tx-form-row {
+      flex-wrap: wrap;
+    }
+    .add-tx-form-group {
+      min-width: 100%;
+    }
+  }
+
+  /* ─── PAGINATION ─── */
+  .pagination { display: flex; align-items: center; justify-content: space-between; padding: var(--space-3) var(--space-4); border-top: 1px solid var(--color-divider, var(--color-border)); font-size: var(--font-size-xs); color: var(--color-text-secondary); }
+  .pagination-btns { display: flex; gap: var(--space-1); }
+  .pagination-btn { padding: var(--space-1) var(--space-3); border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-bg-elevated); color: var(--color-text-primary); font-size: var(--font-size-xs); font-weight: var(--font-weight-medium); cursor: pointer; transition: all var(--duration-fast) var(--ease-out); }
+  .pagination-btn:hover { background: var(--color-bg-subtle); border-color: var(--color-border-strong); }
+  .pagination-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .pagination-btn.active { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+
+  /* ─── EMPTY STATE ─── */
+  .empty-state {
+    display: none; flex-direction: column; align-items: center; justify-content: center;
+    padding: var(--space-16) var(--space-6); text-align: center;
+  }
+  .empty-state.visible { display: flex; }
+  .empty-state-icon {
+    width: 64px; height: 64px; display: flex; align-items: center; justify-content: center;
+    background: var(--color-bg-subtle); border-radius: var(--radius-lg);
+    margin-bottom: var(--space-5); color: var(--color-text-tertiary);
+  }
+  .empty-state-icon svg { width: 32px; height: 32px; }
+  .empty-state-title {
+    font-size: var(--font-size-xl); font-weight: var(--font-weight-semibold);
+    color: var(--color-text-primary); margin-bottom: var(--space-2);
+  }
+  .empty-state-description {
+    font-size: var(--font-size-base); color: var(--color-text-secondary);
+    max-width: 400px; margin-bottom: var(--space-6);
+  }
+
+  /* ─── ERROR STATE ─── */
+  .error-banner {
+    display: none; align-items: center; gap: var(--space-3);
+    padding: var(--space-3) var(--space-5); background: rgba(255, 59, 48, 0.08);
+    border: 1px solid rgba(255, 59, 48, 0.2); border-radius: var(--radius-md);
+    margin-bottom: var(--space-4);
+  }
+  .error-banner.visible {
+    display: flex; animation: error-enter var(--duration-slow) var(--ease-out);
+  }
+  @keyframes error-enter { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+  .error-banner-icon { width: 20px; height: 20px; color: var(--color-error); flex-shrink: 0; }
+  .error-banner-content { flex: 1; }
+  .error-banner-title { font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); color: var(--color-error); }
+  .error-banner-message { font-size: var(--font-size-xs); color: var(--color-text-secondary); }
+  .btn-retry {
+    padding: var(--space-2) var(--space-3); font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-semibold); color: var(--color-error);
+    border: 1px solid var(--color-error); border-radius: var(--radius-sm);
+    transition: all var(--duration-fast); white-space: nowrap; background: none; cursor: pointer;
+  }
+  .btn-retry:hover { background: var(--color-error); color: var(--color-text-inverse); }
+
+  /* ─── SKELETON LOADING ─── */
+  .skeleton { display: none; }
+  .skeleton.visible { display: block; }
+  .skeleton-pulse {
+    background: linear-gradient(90deg, var(--color-bg-subtle) 25%, var(--color-divider) 50%, var(--color-bg-subtle) 75%);
+    background-size: 200% 100%; animation: skeleton-shimmer 1.5s ease-in-out infinite;
+    border-radius: var(--radius-sm);
+  }
+  @keyframes skeleton-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+  .skeleton-table-row {
+    display: flex; gap: var(--space-4); padding: var(--space-3) var(--space-4);
+    border-bottom: 1px solid var(--color-divider);
+  }
+  .skeleton-table-row .skeleton-cell { height: 14px; }
+
+  /* ─── RESPONSIVE ─── */
+  @media (max-width: 767px) {
+    .page-header { flex-direction: column; align-items: flex-start; }
+    .ranking-table { font-size: var(--font-size-xs); }
+    .ranking-table td, .ranking-table th { padding: var(--space-2) var(--space-3); }
+    .company-name { display: none; }
+    .ranking-panel.profit .company-column { display: none; }
+    .notes-cell { max-width: 100px; }
+    .edit-readonly-grid { grid-template-columns: 1fr; }
+    .stats-bar {
+      display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: var(--space-3) var(--space-4); padding: var(--space-3) var(--space-4);
+      overflow-x: visible; white-space: normal; align-items: start;
+    }
+    .stats-bar-divider { display: none; }
+    .stats-bar-item { min-width: 0; }
+    .stats-bar-value {
+      font-size: var(--font-size-sm); white-space: normal;
+      overflow: hidden; text-overflow: ellipsis;
+      font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1;
+    }
+    /* Best/Worst: compact single-line pct on mobile */
+    .stats-bar-value .pct-full { display: none; }
+    .stats-bar-value .pct-short { display: inline; }
+    #stat-best-trade, #stat-worst-trade { white-space: nowrap; }
+    .year-heatmap { padding: var(--space-3) var(--space-4); }
+    .year-heatmap-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+    .ym-cell.total {
+      grid-column: 1 / -1; flex-direction: row; justify-content: space-between;
+      align-items: center; padding: var(--space-2) var(--space-3);
+    }
+    .portfolio-tabs-scroll { display: none; }
+    .portfolio-tabs-dropdown { display: flex; }
+  }
+  @media (max-width: 480px) {
+    .hide-mobile { display: none; }
+    .stats-bar { gap: var(--space-2) var(--space-3); }
+    .stats-bar-value { font-size: 13px; }
+    .year-heatmap-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
+  /* Tokens live in css/styles.css (:root, global Terminal Precision) —
+     no per-screen pinning. */
+  /* Header + tabs: underline console, opaque sticky */
+  .page-title { font-weight: var(--font-weight-bold); letter-spacing: -0.01em; }
+  .page-meta { font-family: var(--font-mono); font-size: var(--font-size-xs); }
+  .portfolio-tabs { gap: var(--space-5); border-bottom: 1px solid var(--color-divider); background: var(--color-bg); }
+  .portfolio-tab-group { background: none; border: none; border-bottom: 2px solid transparent; border-radius: 0; padding: var(--space-2) 2px; transition: color var(--duration-fast), border-color var(--duration-fast); }
+  .portfolio-tab-group:hover { background: none; border-color: transparent; color: var(--color-text-primary); }
+  .portfolio-tab-group:active { transform: none; }
+  .portfolio-tab-group[aria-selected="true"] { background: none; border-color: var(--color-text-primary); color: var(--color-text-primary); font-weight: var(--font-weight-bold); }
+  .portfolio-tab-group[aria-selected="true"] .tab-currency { background: transparent; border: 1px solid currentColor; color: inherit; }
+  .tab-currency { font-family: var(--font-mono); font-size: 10px; background: transparent; border: 1px solid var(--color-border); border-radius: 4px; letter-spacing: 0.08em; }
+  .portfolio-tabs-dropdown:focus { box-shadow: 2px 2px 0 var(--color-text-primary); }
+  /* Stats: console line */
+  .stats-bar { gap: var(--space-5); font-family: var(--font-mono); }
+  /* Ranking table (canonical): dense console, tabular figures */
+  .ranking-table { font-size: 13px; }
+  .ranking-table thead th { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.1em; padding: var(--space-2) var(--space-3); }
+  .ranking-table thead th:hover { color: var(--color-text-primary); }
+  .ranking-table tbody tr:hover { background: var(--color-bg-inset); }
+  .ranking-table td { padding: var(--space-2) var(--space-3); font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; }
+  .ticker-cell { font-size: var(--font-size-sm); }
+  .company-name { font-size: 11px; }
+  /* Badges: mono chips (buy/sell follow remapped tokens automatically) */
+  .trade-badge { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em; border-radius: 4px; }
+  /* Edit/delete: quiet icons, error (not undefined danger) tokens */
+  .btn-edit:hover { background: var(--color-bg-inset); color: var(--color-text-primary); }
+  .btn-edit:active { transform: translate(1px, 1px); }
+  .btn-delete:hover { background: var(--color-error-subtle); color: var(--color-error); }
+  .btn-delete:active { transform: translate(1px, 1px); }
+  /* Edit modal: calm entrance, mono labels, hard-shadow focus */
+  .modal-card { animation: modal-enter var(--duration-normal) var(--ease-out); }
+  @keyframes modal-enter { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+  .modal-header { padding: var(--space-4) var(--space-5); }
+  .modal-body { padding: var(--space-5); }
+  .edit-field-label { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.12em; }
+  .edit-input { background: var(--color-bg-inset); font-size: 13px; transition: border-color var(--duration-normal) var(--ease-out), box-shadow var(--duration-normal) var(--ease-out); }
+  .edit-input:focus { border-color: var(--color-text-primary); box-shadow: 2px 2px 0 var(--color-text-primary); }
+  .date-display { font-family: var(--font-mono); }
+  /* Add-transaction BUY/SELL segmented pair: mono console */
+  .add-tx-type-btn { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.06em; }
+  .add-tx-type-btn:active { transform: translate(1px, 1px); }
+  .add-tx-submit-btn { font-family: var(--font-mono); font-size: 12px; }
+  .add-tx-submit-btn:active { transform: translate(1px, 1px); }
+  /* Pagination: mono console */
+  .pagination { font-family: var(--font-mono); }
+  .pagination-btn.active { color: var(--color-text-inverse); }
+  @media (max-width: 767px) {
+    .add-tx-type-btn, .add-tx-submit-btn { min-height: 44px; }
+    .edit-input { min-height: 44px; }
+  }
+</style>
+
+<!-- ═══════════════════════════════════════════════════════════
+     ERROR BANNER
+     ═══════════════════════════════════════════════════════════ -->
+<div class="error-banner" id="transactions-error" role="alert">
+  <svg class="error-banner-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+    <circle cx="10" cy="10" r="8" stroke="currentColor" stroke-width="1.5"/>
+    <path d="M10 6v5M10 13.5v.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+  </svg>
+  <div class="error-banner-content">
+    <div class="error-banner-title">Unable to load transactions</div>
+    <div class="error-banner-message">Check your connection and try again</div>
+  </div>
+  <button class="btn-retry" id="retry-btn" aria-label="Retry loading transactions">Retry</button>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     PAGE HEADER
+     ═══════════════════════════════════════════════════════════ -->
+<header class="page-header">
+  <div class="page-title-group">
+    <div>
+      <h1 class="page-title">Transactions</h1>
+      <p class="page-subtitle">Realized profit tracking per portfolio</p>
+    </div>
+  </div>
+  <div class="page-meta">
+    <span id="transactions-summary-meta" style="font-family: var(--font-mono); font-size: var(--font-size-xs);"></span>
+    <button class="btn-primary add-transaction-btn" id="add-transaction-btn" aria-label="Add transaction">+ Add Transaction</button>
+  </div>
+</header>
+
+<!-- ═══════════════════════════════════════════════════════════
+     ADD TRANSACTION FORM (collapsible)
+     ═══════════════════════════════════════════════════════════ -->
+<div class="add-transaction-section" id="add-transaction-section" role="region" aria-label="Add transaction form">
+  <form class="add-transaction-form" id="add-transaction-form" onsubmit="return false" aria-label="Add transaction">
+    <div class="add-tx-form-row">
+      <div class="add-tx-form-group">
+        <label class="add-tx-form-label" for="add-tx-ticker">Ticker</label>
+        <div class="add-tx-ticker-row">
+          <input type="text" id="add-tx-ticker" class="add-tx-input add-tx-ticker-input" placeholder="Ticker (e.g. NVDA)" autocomplete="off" spellcheck="false" maxlength="10" aria-describedby="add-tx-ticker-validation add-tx-ticker-info">
+          <div class="add-tx-ticker-validation" id="add-tx-ticker-validation" role="status" aria-live="polite"></div>
+        </div>
+        <div class="add-tx-ticker-info" id="add-tx-ticker-info"></div>
+      </div>
+      <div class="add-tx-form-group">
+        <label class="add-tx-form-label">Type</label>
+        <div class="add-tx-type-toggle" role="radiogroup" aria-label="Transaction type">
+          <button type="button" class="add-tx-type-btn btn-buy active" id="add-tx-type-buy" role="radio" aria-checked="true" aria-label="Buy">BUY</button>
+          <button type="button" class="add-tx-type-btn btn-sell" id="add-tx-type-sell" role="radio" aria-checked="false" aria-label="Sell">SELL</button>
+        </div>
+      </div>
+      <div class="add-tx-form-group">
+        <label class="add-tx-form-label" for="add-tx-qty">Quantity</label>
+        <input type="number" id="add-tx-qty" class="add-tx-input" placeholder="0" min="1" step="any">
+      </div>
+      <div class="add-tx-form-group">
+        <label class="add-tx-form-label" for="add-tx-price">Price</label>
+        <div class="add-tx-input-wrap">
+          <span class="add-tx-input-prefix">$</span>
+          <input type="number" id="add-tx-price" class="add-tx-input has-prefix" placeholder="0.00" step="0.01">
+        </div>
+      </div>
+      <div class="add-tx-form-group">
+        <label class="add-tx-form-label" for="add-tx-date">Date</label>
+        <div class="date-wrap">
+          <div class="add-tx-date-display" id="add-tx-date-display" role="button" tabindex="0" aria-label="Choose transaction date"></div>
+          <input type="date" id="add-tx-date" class="add-tx-date-hidden">
+        </div>
+      </div>
+      <div class="add-tx-form-group">
+        <label class="add-tx-form-label" for="add-tx-notes">Notes</label>
+        <input type="text" id="add-tx-notes" class="add-tx-input" placeholder="Optional">
+      </div>
+      <button type="submit" class="add-tx-submit-btn" id="add-tx-submit-btn" aria-label="Add transaction">Add Transaction</button>
+    </div>
+  </form>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     PORTFOLIO TABS
+     ═══════════════════════════════════════════════════════════ -->
+<div class="portfolio-tabs" id="transactions-portfolio-tabs" role="tablist" aria-label="Portfolio selection">
+  <div class="portfolio-tabs-scroll" id="portfolio-tabs-scroll">
+    <!-- Populated by JS module -->
+  </div>
+  <button class="portfolio-tabs-dropdown" id="portfolio-tabs-dropdown" aria-haspopup="listbox" aria-expanded="false">
+    <span id="dropdown-selected-name">Select portfolio</span>
+    <svg viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M3 5.5l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </button>
+  <div class="portfolio-dropdown-menu" id="portfolio-dropdown-menu" role="listbox" aria-label="Portfolio options">
+    <!-- Populated by JS module -->
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SKELETON LOADING STATE
+     ═══════════════════════════════════════════════════════════ -->
+<div class="skeleton" id="transactions-loading" aria-label="Loading transactions">
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:var(--space-4);margin-bottom:var(--space-6)">
+    <div style="background:var(--color-bg-elevated);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:var(--space-5)">
+      <div class="skeleton-pulse" style="width:80px;height:14px;margin-bottom:var(--space-3)"></div>
+      <div class="skeleton-pulse" style="width:140px;height:28px;margin-bottom:var(--space-2)"></div>
+      <div class="skeleton-pulse" style="width:100px;height:14px"></div>
+    </div>
+    <div style="background:var(--color-bg-elevated);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:var(--space-5)">
+      <div class="skeleton-pulse" style="width:80px;height:14px;margin-bottom:var(--space-3)"></div>
+      <div class="skeleton-pulse" style="width:100px;height:28px;margin-bottom:var(--space-2)"></div>
+      <div class="skeleton-pulse" style="width:80px;height:14px"></div>
+    </div>
+    <div style="background:var(--color-bg-elevated);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:var(--space-5)">
+      <div class="skeleton-pulse" style="width:80px;height:14px;margin-bottom:var(--space-3)"></div>
+      <div class="skeleton-pulse" style="width:60px;height:28px;margin-bottom:var(--space-2)"></div>
+      <div class="skeleton-pulse" style="width:120px;height:14px"></div>
+    </div>
+  </div>
+  <div style="background:var(--color-bg-elevated);border:1px solid var(--color-border);border-radius:var(--radius-md);overflow:hidden;margin-bottom:var(--space-6)">
+    <div style="padding:var(--space-4) var(--space-5);border-bottom:1px solid var(--color-divider)">
+      <div class="skeleton-pulse" style="width:160px;height:18px"></div>
+    </div>
+    <div class="skeleton-table-row">
+      <div class="skeleton-cell skeleton-pulse" style="width:10%"></div>
+      <div class="skeleton-cell skeleton-pulse" style="width:15%"></div>
+      <div class="skeleton-cell skeleton-pulse" style="width:10%"></div>
+      <div class="skeleton-cell skeleton-pulse" style="width:10%"></div>
+      <div class="skeleton-cell skeleton-pulse" style="width:12%"></div>
+      <div class="skeleton-cell skeleton-pulse" style="width:12%"></div>
+      <div class="skeleton-cell skeleton-pulse" style="width:10%"></div>
+      <div class="skeleton-cell skeleton-pulse" style="width:8%"></div>
+    </div>
+    <div class="skeleton-table-row">
+      <div class="skeleton-cell skeleton-pulse" style="width:10%"></div>
+      <div class="skeleton-cell skeleton-pulse" style="width:15%"></div>
+      <div class="skeleton-cell skeleton-pulse" style="width:10%"></div>
+      <div class="skeleton-cell skeleton-pulse" style="width:10%"></div>
+      <div class="skeleton-cell skeleton-pulse" style="width:12%"></div>
+      <div class="skeleton-cell skeleton-pulse" style="width:12%"></div>
+      <div class="skeleton-cell skeleton-pulse" style="width:10%"></div>
+      <div class="skeleton-cell skeleton-pulse" style="width:8%"></div>
+    </div>
+    <div class="skeleton-table-row">
+      <div class="skeleton-cell skeleton-pulse" style="width:10%"></div>
+      <div class="skeleton-cell skeleton-pulse" style="width:15%"></div>
+      <div class="skeleton-cell skeleton-pulse" style="width:10%"></div>
+      <div class="skeleton-cell skeleton-pulse" style="width:10%"></div>
+      <div class="skeleton-cell skeleton-pulse" style="width:12%"></div>
+      <div class="skeleton-cell skeleton-pulse" style="width:12%"></div>
+      <div class="skeleton-cell skeleton-pulse" style="width:10%"></div>
+      <div class="skeleton-cell skeleton-pulse" style="width:8%"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     EMPTY STATE
+     ═══════════════════════════════════════════════════════════ -->
+<div class="empty-state" id="transactions-empty">
+  <div class="empty-state-icon">
+    <svg viewBox="0 0 32 32" fill="none" aria-hidden="true">
+      <rect x="4" y="4" width="24" height="24" rx="3" stroke="currentColor" stroke-width="2"/>
+      <path d="M10 12h12M10 16h12M10 20h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <circle cx="22" cy="22" r="6" fill="var(--color-bg-subtle)" stroke="currentColor" stroke-width="2"/>
+      <path d="M22 19v6M19 22h6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+    </svg>
+  </div>
+  <h2 class="empty-state-title">No transactions yet</h2>
+  <p class="empty-state-description">Buy or sell a position from the Portfolio screen to start tracking trades.</p>
+  <button class="btn-primary" id="empty-goto-portfolio">
+    <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M5 8h6M5 5h6M5 11h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    Go to Portfolio
+  </button>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     MAIN VIEW — Stats + Tables
+     ═══════════════════════════════════════════════════════════ -->
+<div id="transactions-main-view">
+
+  <!-- STATS BAR -->
+  <div class="stats-bar" id="transactions-stats" aria-label="Transaction statistics">
+    <div class="stats-bar-item">
+      <span class="stats-bar-label">Realized P/L</span>
+      <span class="stats-bar-value" id="stat-realized-pl">--</span>
+    </div>
+    <div class="stats-bar-divider" aria-hidden="true"></div>
+    <div class="stats-bar-item">
+      <span class="stats-bar-label">Avg Return %</span>
+      <span class="stats-bar-value" id="stat-avg-return">--</span>
+    </div>
+    <div class="stats-bar-divider" aria-hidden="true"></div>
+    <div class="stats-bar-item">
+      <span class="stats-bar-label">Total Trades</span>
+      <span class="stats-bar-value" id="stat-total-trades">--</span>
+    </div>
+    <div class="stats-bar-divider" aria-hidden="true"></div>
+    <div class="stats-bar-item">
+      <span class="stats-bar-label">Profitable Tickers</span>
+      <span class="stats-bar-value" id="stat-profitable-tickers">--</span>
+    </div>
+    <div class="stats-bar-divider" aria-hidden="true"></div>
+    <div class="stats-bar-item">
+      <span class="stats-bar-label">Best Trade</span>
+      <span class="stats-bar-value" id="stat-best-trade">--</span>
+    </div>
+    <div class="stats-bar-divider" aria-hidden="true"></div>
+    <div class="stats-bar-item">
+      <span class="stats-bar-label">Worst Trade</span>
+      <span class="stats-bar-value" id="stat-worst-trade">--</span>
+    </div>
+  </div>
+
+  <!-- YEAR HEATMAP: monthly realized P/L for the active portfolio -->
+  <section class="year-heatmap" id="year-heatmap" role="region" aria-label="Monthly realized profit and loss by year">
+    <div class="year-heatmap-header">
+      <button class="year-nav-btn" id="year-prev" aria-label="Previous year">
+        <svg viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M9 2.5L4.5 7 9 11.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <span class="year-label" id="year-label">2026</span>
+      <button class="year-nav-btn" id="year-next" aria-label="Next year">
+        <svg viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M5 2.5L9.5 7 5 11.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
+    <div class="year-heatmap-grid" id="year-grid">
+      <!-- Populated by JS module -->
+    </div>
+  </section>
+
+  <!-- TRADING DAYS: separate month blocks with weekday columns and week rows -->
+  <section class="trading-activity" id="trading-activity" aria-label="Portfolio trading days by year" aria-busy="false">
+    <div class="year-heatmap-header">
+      <button type="button" class="year-nav-btn" data-activity-action="prev" aria-label="Previous trading activity year" disabled>
+        <svg viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M9 2.5L4.5 7 9 11.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <span class="year-label trading-activity-year">—</span>
+      <button type="button" class="year-nav-btn" data-activity-action="next" aria-label="Next trading activity year" disabled>
+        <svg viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M5 2.5L9.5 7 5 11.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
+    <p class="trading-activity-total" role="status">Loading trading days…</p>
+    <div class="trading-activity-viewport" tabindex="0" role="region" aria-label="Monthly trading calendars. Scroll horizontally on smaller screens.">
+      <div class="trading-activity-months"></div>
+    </div>
+    <div class="trading-activity-footer">
+      <div class="trading-activity-legend" aria-label="Calendar legend">
+        <span><i class="trading-activity-swatch" aria-hidden="true"></i>No trades</span>
+        <span><i class="trading-activity-swatch traded" aria-hidden="true"></i>Traded</span>
+        <span><i class="trading-activity-swatch future" aria-hidden="true"></i>Future</span>
+      </div>
+      <p class="trading-activity-detail" aria-live="polite"></p>
+      <button type="button" class="trading-activity-retry" data-activity-action="retry" hidden>Retry trading activity</button>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════
+       TABLE 1: TICKER PROFIT SUMMARY
+       ═══════════════════════════════════════════════════════ -->
+  <section class="ranking-panel profit" aria-label="Ticker profit summary">
+    <div class="panel-accent" aria-hidden="true"></div>
+    <div class="panel-header">
+      <div class="panel-title-group">
+        <div class="panel-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+          </svg>
+        </div>
+        <div>
+          <div class="panel-title">Realized P/L by Ticker</div>
+          <div class="panel-subtitle">Only tickers with completed sell cycles</div>
+        </div>
+      </div>
+      <span class="panel-count" id="profit-summary-count" aria-label="Tickers with realized gains">0 tickers</span>
+    </div>
+    <div style="position: relative; overflow-x: auto;">
+      <table class="ranking-table" role="grid" aria-label="Ticker profit summary">
+        <thead>
+          <tr>
+            <th scope="col" class="sorted-desc">Ticker</th>
+            <th scope="col" class="company-column">Company</th>
+            <th scope="col" class="text-right">Bought</th>
+            <th scope="col" class="text-right">Sold</th>
+            <th scope="col" class="text-right">Avg Buy</th>
+            <th scope="col" class="text-right">Avg Sell</th>
+            <th scope="col" class="text-right sorted-desc">Realized P/L</th>
+            <th scope="col" class="text-right">P/L %</th>
+            <th scope="col" class="text-right"># Trades</th>
+          </tr>
+        </thead>
+        <tbody id="profit-summary-tbody">
+          <!-- Populated by JS module -->
+        </tbody>
+      </table>
+    </div>
+    <!-- Table 1 Pagination -->
+    <div class="pagination" id="profit-summary-pagination">
+      <span id="profit-summary-page-info">Showing 1-10 of 0 tickers</span>
+      <div class="pagination-btns" id="profit-summary-page-btns"></div>
+    </div>
+  </section>
+
+  <section class="ranking-panel profit" aria-label="Realized P/L by trade">
+    <div class="panel-accent" aria-hidden="true"></div>
+    <div class="panel-header">
+      <div class="panel-title-group">
+        <div class="panel-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+          </svg>
+        </div>
+        <div>
+          <div class="panel-title">Realized P/L by Trade</div>
+          <div class="panel-subtitle">Realized profit and loss for each sale</div>
+        </div>
+      </div>
+      <span class="panel-count" id="realized-trades-count">0 sales</span>
+    </div>
+    <div style="position:relative;overflow-x:auto;">
+      <table class="ranking-table" aria-label="Realized P/L by trade">
+        <thead><tr>
+          <th scope="col" tabindex="0" data-trade-sort="sell_date" aria-sort="descending" class="sorted-desc">Sell Date</th>
+          <th scope="col" tabindex="0" data-trade-sort="ticker">Ticker</th>
+          <th scope="col" tabindex="0" data-trade-sort="company" class="company-column">Company</th>
+          <th scope="col" tabindex="0" data-trade-sort="qty_sold" class="text-right">Qty Sold</th>
+          <th scope="col" tabindex="0" data-trade-sort="avg_buy_price" class="text-right" title="Portfolio average purchase price immediately before this sale">Avg Price</th>
+          <th scope="col" tabindex="0" data-trade-sort="sell_price" class="text-right">Sell Price</th>
+          <th scope="col" tabindex="0" data-trade-sort="realized_pnl" class="text-right">Realized P/L</th>
+          <th scope="col" tabindex="0" data-trade-sort="realized_pnl_pct" class="text-right">P/L %</th>
+        </tr></thead>
+        <tbody id="realized-trades-tbody"></tbody>
+      </table>
+    </div>
+    <div class="pagination">
+      <span id="realized-trades-page-info">0 sales</span>
+      <div class="pagination-btns" id="realized-trades-page-btns"></div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════
+       TABLE 2: TRANSACTION LEDGER
+       ═══════════════════════════════════════════════════════ -->
+  <section class="ranking-panel ledger" aria-label="Transaction ledger">
+    <div class="panel-accent" aria-hidden="true"></div>
+    <div class="panel-header">
+      <div class="panel-title-group">
+        <div class="panel-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="16" y1="13" x2="8" y2="13"/>
+            <line x1="16" y1="17" x2="8" y2="17"/>
+            <polyline points="10 9 9 9 8 9"/>
+          </svg>
+        </div>
+        <div>
+          <div class="panel-title">Trade History</div>
+          <div class="panel-subtitle">All buy and sell transactions for this portfolio</div>
+        </div>
+      </div>
+      <span class="panel-count" id="ledger-count" aria-label="Total transactions">0 trades</span>
+    </div>
+    <div style="position: relative; overflow-x: auto;">
+      <table class="ranking-table" role="grid" aria-label="Transaction ledger">
+        <thead>
+          <tr>
+            <th scope="col" class="sorted-desc">Date</th>
+            <th scope="col">Ticker</th>
+            <th scope="col">Type</th>
+            <th scope="col" class="text-right">Qty</th>
+            <th scope="col" class="text-right">Price</th>
+            <th scope="col" class="text-right">Total</th>
+            <th scope="col" class="hide-mobile">Notes</th>
+            <th scope="col" class="text-center">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="transactions-tbody">
+          <!-- Populated by JS module -->
+        </tbody>
+      </table>
+    </div>
+    <!-- Table 2 Pagination -->
+    <div class="pagination" id="ledger-pagination">
+      <span id="ledger-page-info">Showing 1-10 of 0 trades</span>
+      <div class="pagination-btns" id="ledger-page-btns"></div>
+    </div>
+  </section>
+
+</div><!-- /transactions-main-view -->
+
+<!-- ═══════════════════════════════════════════════════════════
+     EDIT TRANSACTION MODAL
+     Allows editing date, qty, price, and notes.
+     Ticker and type are read-only (immutable).
+     ═══════════════════════════════════════════════════════════ -->
+<div class="modal-backdrop edit-modal" id="edit-transaction-modal" role="dialog" aria-modal="true" aria-label="Edit transaction">
+  <div class="modal-card" style="max-width:520px">
+    <div class="modal-header">
+      <h2 class="modal-title">Edit Transaction</h2>
+      <button class="modal-close" id="edit-modal-close" aria-label="Close">
+        <svg viewBox="0 0 18 18" fill="none"><path d="M4 4l10 10M14 4L4 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <!-- Read-only transaction info -->
+      <div class="edit-readonly-grid" id="edit-readonly-grid">
+        <div class="edit-readonly-item">
+          <span class="edit-readonly-label">Ticker</span>
+          <span class="edit-readonly-value" id="edit-ro-ticker">--</span>
+        </div>
+        <div class="edit-readonly-item">
+          <span class="edit-readonly-label">Type</span>
+          <span class="edit-readonly-value" id="edit-ro-type">--</span>
+        </div>
+        <div class="edit-readonly-item">
+          <span class="edit-readonly-label">Created</span>
+          <span class="edit-readonly-value" id="edit-ro-created">--</span>
+        </div>
+      </div>
+
+      <!-- Editable fields -->
+      <div class="edit-field-group">
+        <label class="edit-field-label" for="edit-tx-date">Trade Date</label>
+        <div class="date-wrap">
+          <div class="date-display" id="edit-tx-date-display" role="button" tabindex="0" aria-label="Choose trade date"></div>
+          <input type="date" id="edit-tx-date" class="date-hidden">
+        </div>
+      </div>
+      <div class="edit-field-group">
+        <label class="edit-field-label" for="edit-tx-qty">Quantity</label>
+        <input type="number" id="edit-tx-qty" class="edit-input" min="0" step="any" placeholder="0">
+      </div>
+      <div class="edit-field-group">
+        <label class="edit-field-label" for="edit-tx-price">Price</label>
+        <div class="trade-input-wrap"><span class="trade-input-prefix">$</span><input type="number" id="edit-tx-price" class="edit-input has-prefix" step="0.01" placeholder="0.00"></div>
+      </div>
+      <div class="edit-field-group">
+        <label class="edit-field-label">Total</label>
+        <div class="edit-readonly-value" id="edit-tx-total">$0.00</div>
+      </div>
+      <div class="edit-field-group">
+        <label class="edit-field-label" for="edit-tx-notes">Notes</label>
+        <textarea id="edit-tx-notes" class="edit-textarea" maxlength="500" placeholder="Add notes about this trade..."></textarea>
+        <div class="edit-char-count"><span id="notes-char-count">0</span> / 500</div>
+      </div>
+
+      <div class="edit-actions">
+        <button class="btn-ghost" id="edit-tx-cancel">Cancel</button>
+        <button class="btn-primary" id="edit-tx-save">Save Changes</button>
+      </div>
+    </div>
+  </div>
+</div>

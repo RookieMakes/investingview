@@ -1,0 +1,194 @@
+<!-- ═══════════════════════════════════════════════════════════
+     Universe Screen — Stock Universe Management
+     Loaded by App.loadScreen('universe') into #content
+     ═══════════════════════════════════════════════════════════ -->
+
+<style>
+  /* Screen layout */
+  .screen { padding: 0; max-width: 1400px; margin: 0 auto; }
+  .screen-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-6); }
+  .screen-title { font-size: var(--font-size-xl); font-weight: var(--font-weight-semibold); }
+  .screen-actions { display: flex; gap: var(--space-3); align-items: center; }
+
+  /* Loading & error states */
+  .error-state .error-message { color: var(--color-error); font-size: var(--font-size-base); }
+  .hidden { display: none !important; }
+
+  /* Universe-specific */
+  .universe-toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-6); gap: var(--space-4); flex-wrap: wrap; }
+  .universe-toolbar-left { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
+  .universe-filters { display: flex; gap: var(--space-2); }
+  .filter-chip { padding: 6px var(--space-3); font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); color: var(--color-text-secondary); background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-full); transition: all var(--duration-normal) var(--ease-out); cursor: pointer; }
+  .filter-chip:hover { border-color: var(--color-primary); color: var(--color-primary); }
+  .filter-chip.active { background: var(--color-primary); border-color: var(--color-primary); color: var(--color-text-inverse); }
+  .universe-search { position: relative; }
+  .universe-search-input { height: 36px; padding: 0 var(--space-4) 0 36px; background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius-sm); font-size: var(--font-size-sm); color: var(--color-text-primary); width: 240px; transition: border-color var(--duration-normal) var(--ease-out); }
+  .universe-search-input:focus { border-color: var(--color-primary); outline: none; }
+  .universe-search-icon { position: absolute; left: var(--space-3); top: 50%; transform: translateY(-50%); color: var(--color-text-tertiary); pointer-events: none; }
+  .universe-count { font-size: var(--font-size-sm); color: var(--color-text-secondary); }
+  .stock-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--space-4); }
+  .stock-card { background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-5); transition: box-shadow var(--duration-normal) var(--ease-out); cursor: pointer; }
+  .stock-card:hover { box-shadow: var(--shadow-md); }
+  .stock-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: var(--space-3); }
+  .stock-card-ticker { font-size: var(--font-size-lg); font-weight: var(--font-weight-bold); font-family: var(--font-mono); color: var(--color-text-primary); }
+  .stock-card-source { font-size: var(--font-size-xs); padding: 2px 8px; border-radius: var(--radius-full); }
+  .stock-card-source.default { background: var(--color-primary-subtle); color: var(--color-primary); }
+  .stock-card-source.custom { background: var(--color-warning-subtle); color: var(--color-warning); }
+  .stock-card-company { font-size: var(--font-size-sm); color: var(--color-text-secondary); margin-bottom: var(--space-3); }
+  .stock-card-stats { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); }
+  .stock-stat { display: flex; flex-direction: column; gap: 1px; }
+  .stock-stat-label { font-size: var(--font-size-xs); color: var(--color-text-tertiary); }
+  .stock-stat-value { font-size: var(--font-size-sm); font-family: var(--font-mono); font-weight: var(--font-weight-medium); }
+  .stock-card-footer { display: flex; justify-content: space-between; align-items: center; margin-top: var(--space-3); padding-top: var(--space-3); border-top: 1px solid var(--color-divider); }
+  .stock-card-sector { font-size: var(--font-size-xs); color: var(--color-text-secondary); }
+  .stock-card-remove { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-sm); color: var(--color-text-tertiary); transition: all var(--duration-fast); }
+  .stock-card-remove:hover { background: var(--color-error-subtle); color: var(--color-error); }
+
+  /* Sector edit button */
+  .stock-card-sector { display: inline-flex; align-items: center; gap: 4px; }
+  .sector-edit-btn { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: var(--radius-sm); color: var(--color-text-tertiary); transition: all var(--duration-fast); background: none; border: none; padding: 0; cursor: pointer; opacity: 0; }
+  .stock-card:hover .sector-edit-btn { opacity: 1; }
+  .sector-edit-btn:hover { background: var(--color-bg-subtle); color: var(--color-primary); }
+
+  /* Sector dropdown */
+  .sector-dropdown { position: absolute; top: 100%; left: 0; min-width: 180px; max-height: 240px; overflow-y: auto; background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-md); box-shadow: var(--shadow-lg); z-index: 200; padding: var(--space-1); }
+  .sector-option { display: block; width: 100%; padding: var(--space-2) var(--space-3); font-size: var(--font-size-sm); color: var(--color-text-primary); text-align: left; border: none; background: none; cursor: pointer; border-radius: var(--radius-sm); transition: background var(--duration-fast); }
+  .sector-option:hover { background: var(--color-bg-subtle); }
+  .sector-option.active { background: var(--color-primary-subtle); color: var(--color-primary); font-weight: var(--font-weight-medium); }
+
+  /* Add stock form */
+  .add-stock-form { display: flex; gap: var(--space-2); align-items: flex-start; padding-top: var(--space-1); }
+  .add-stock-form-group { display: flex; flex-direction: column; gap: 2px; position: relative; }
+  .ticker-input-row { display: flex; align-items: center; gap: var(--space-2); }
+  .add-stock-ticker-input { height: 36px; padding: 0 var(--space-3); background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius-sm); font-size: var(--font-size-sm); color: var(--color-text-primary); width: 160px; font-family: var(--font-mono); text-transform: uppercase; box-sizing: border-box; }
+  .add-stock-ticker-input:focus { border-color: var(--color-primary); outline: none; }
+  .ticker-validation { font-size: 15px; flex-shrink: 0; min-width: 18px; text-align: center; }
+  .ticker-validation.valid { color: var(--color-success); }
+  .ticker-validation.invalid { color: var(--color-error); }
+  .ticker-validation.loading { color: var(--color-text-secondary); }
+  .ticker-info-line { font-size: var(--font-size-xs); color: var(--color-text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-height: 16px; position: absolute; bottom: -20px; left: 0; right: 0; z-index: 1; }
+
+  /* Remove old input styles */
+  .add-stock-input { display: none; }
+  .add-stock-name-input { display: none; }
+  .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: var(--z-modal); display: none; align-items: center; justify-content: center; opacity: 0; transition: opacity var(--duration-normal) var(--ease-out); }
+  .modal-backdrop.open { display: flex; opacity: 1; }
+  .modal-card { background: var(--color-bg-elevated); border-radius: var(--radius-lg); box-shadow: var(--shadow-xl); width: 100%; max-height: 90vh; overflow-y: auto; animation: modal-enter var(--duration-slow) var(--ease-spring); }
+  @keyframes modal-enter { from { opacity: 0; transform: translateY(16px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+  .modal-header { display: flex; align-items: center; justify-content: space-between; padding: var(--space-5) var(--space-6); border-bottom: 1px solid var(--color-divider); }
+  .modal-title { font-size: var(--font-size-lg); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); }
+  .modal-close { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-sm); color: var(--color-text-secondary); transition: background var(--duration-fast); }
+  .modal-close:hover { background: var(--color-bg-subtle); }
+  .modal-close svg { width: 18px; height: 18px; }
+  .modal-body { padding: var(--space-6); }
+  /* Safe vertical centering: identical when content fits; tall Live content
+     top-aligns and scrolls instead of sliding cut-off behind the top nav. */
+
+  @media (max-width: 767px) {
+    .universe-toolbar { flex-direction: column; align-items: stretch; }
+    .universe-search-input { width: 100%; }
+    .stock-grid { grid-template-columns: 1fr; }
+    .screen-header { flex-direction: column; gap: var(--space-3); }
+  }
+
+  /* Tokens live in css/styles.css (:root, global Terminal Precision) —
+     no per-screen pinning. Shared modal + pill template established here. */
+  /* Console header + controls */
+  .screen-title { font-weight: var(--font-weight-bold); letter-spacing: -0.01em; }
+  .filter-chip { font-family: var(--font-mono); font-size: 11px; font-weight: 600; letter-spacing: 0.06em; border-radius: var(--radius-sm); transition: background var(--duration-fast), border-color var(--duration-fast), color var(--duration-fast); }
+  .filter-chip:active { transform: translate(1px, 1px); }
+  .universe-search-input, .add-stock-ticker-input { background: var(--color-bg-inset); font-size: 13px; transition: border-color var(--duration-normal) var(--ease-out), box-shadow var(--duration-normal) var(--ease-out); }
+  .universe-search-input:focus, .add-stock-ticker-input:focus { border-color: var(--color-text-primary); outline: none; box-shadow: 2px 2px 0 var(--color-text-primary); }
+  .universe-count { font-family: var(--font-mono); font-size: 12px; }
+  /* Cards: denser console grid (280px -> 220px min, tighter padding/rhythm) */
+  .stock-grid { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--space-3); }
+  .stock-card { padding: var(--space-4); transition: border-color var(--duration-normal) var(--ease-out), box-shadow var(--duration-normal) var(--ease-out); }
+  .stock-card:hover { border-color: var(--color-border-strong); box-shadow: var(--shadow-sm); }
+  .stock-card:active { transform: translate(1px, 1px); }
+  .stock-card-ticker { font-size: var(--font-size-md); }
+  .stock-card-source { font-family: var(--font-mono); font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; border-radius: 4px; }
+  .stock-card-source.default { background: var(--color-bg-inset); border: 1px solid var(--color-border); color: var(--color-text-secondary); }
+  .stock-card-company { font-size: var(--font-size-xs); margin-bottom: var(--space-2); }
+  .stock-card-stats { gap: var(--space-1); }
+  .stock-stat-label { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; }
+  .stock-stat-value { font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; }
+  .stock-card-footer { margin-top: var(--space-2); padding-top: var(--space-2); }
+  .stock-card-remove { opacity: 1; }
+  .sector-edit-btn:focus-visible { opacity: 1; }
+  .sector-option.active { font-family: var(--font-mono); }
+  /* Shared modal template: calm entrance, token canvas, mono tools */
+  .modal-card { animation: modal-enter var(--duration-normal) var(--ease-out); }
+  @keyframes modal-enter { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+  @media (max-width: 767px) {
+    .universe-search-input, .add-stock-ticker-input { min-height: 44px; font-size: 16px; }
+    .filter-chip { min-height: 36px; }
+    .stock-grid { grid-template-columns: 1fr 1fr; gap: var(--space-2); }
+    .stock-card { padding: var(--space-3); }
+  }
+</style>
+
+<div class="screen" id="universe-screen">
+  <header class="screen-header">
+    <h1 class="screen-title">Universe</h1>
+    <div class="screen-actions">
+      <div class="add-stock-form">
+        <div class="add-stock-form-group">
+          <div class="ticker-input-row">
+            <input type="text" id="universe-ticker-input" class="add-stock-ticker-input"
+                   placeholder="Ticker symbol" autocomplete="off" spellcheck="false"
+                   maxlength="10" aria-label="Stock ticker symbol"
+                   aria-describedby="universe-ticker-validation universe-ticker-info">
+            <div class="ticker-validation" id="universe-ticker-validation" role="status" aria-live="polite"></div>
+          </div>
+          <div class="ticker-info-line" id="universe-ticker-info"></div>
+        </div>
+        <button class="btn-primary" id="universe-add-btn" aria-label="Add stock to universe">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          Add Stock
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="screen-content">
+    <!-- Loading State -->
+    <div class="loading-state" id="universe-loading">
+      <div class="spinner"></div>
+      <p>Loading universe...</p>
+    </div>
+
+    <!-- Error State -->
+    <div class="error-state hidden" id="universe-error">
+      <svg width="48" height="48" viewBox="0 0 48 48" fill="none" aria-hidden="true" style="color: var(--color-error)">
+        <circle cx="24" cy="24" r="22" stroke="currentColor" stroke-width="2"/>
+        <path d="M24 14v12M24 30v2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+      <p class="error-message">Unable to load universe data. Please try again.</p>
+      <button class="btn-primary" onclick="Universe.loadUniverse()">Retry</button>
+    </div>
+
+    <!-- Content Body -->
+    <div class="content-body hidden" id="universe-body">
+      <!-- Toolbar -->
+      <div class="universe-toolbar">
+        <div class="universe-toolbar-left">
+          <div class="universe-filters" role="radiogroup" aria-label="Stock source filter">
+            <button class="filter-chip active" role="radio" aria-checked="true" data-source="all">All</button>
+            <button class="filter-chip" role="radio" aria-checked="false" data-source="default">Default</button>
+            <button class="filter-chip" role="radio" aria-checked="false" data-source="custom">Custom</button>
+          </div>
+          <div class="universe-search">
+            <svg class="universe-search-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.5"/><path d="M11 11l3.5 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            <input type="search" class="universe-search-input" id="universe-search-input" placeholder="Search stocks..." aria-label="Search stocks">
+          </div>
+        </div>
+        <span class="universe-count" id="universe-count">Loading...</span>
+      </div>
+
+      <!-- Stock Grid -->
+      <div class="stock-grid" id="universe-list" role="list" aria-label="Stock universe">
+        <!-- Populated dynamically by universe.js -->
+      </div>
+    </div>
+  </main>
+</div>

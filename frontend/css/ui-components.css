@@ -1,0 +1,329 @@
+/* HIG-inspired web components. Scope changes to controls and presentations;
+   dense data tables and chart header arrangements retain their own layout. */
+
+/* Actions: distinguish a primary action, give secondary actions a surface,
+   and leave destructive actions in their existing red semantics. */
+#content :is(.btn, .btn-primary, .btn-ghost, .settings-save-webhook-btn,
+             .add-chart-btn, .ew-refresh, .wl-modal-btn) {
+  min-height: 36px;
+  border-radius: var(--radius-md);
+  transition: background-color var(--duration-fast) var(--ease-out),
+              border-color var(--duration-fast) var(--ease-out),
+              box-shadow var(--duration-fast) var(--ease-out),
+              color var(--duration-fast) var(--ease-out);
+}
+#content :is(.btn-primary, .settings-save-webhook-btn, .add-chart-btn):hover:not(:disabled) {
+  box-shadow: var(--shadow-md);
+}
+#content :is(.btn-ghost, .wl-modal-btn):hover:not(:disabled) {
+  border-color: var(--color-border-strong);
+  background-color: var(--color-bg-subtle);
+}
+
+/* Selection: show the current choice using both a tint and a visible edge. */
+#content :is(.portfolio-dropdown-option.active, .sector-option.active,
+             .holdings-option[aria-selected="true"]),
+#content #earnings-watchlist .ew-option[aria-selected="true"] {
+  background: var(--color-primary-subtle);
+  color: var(--color-primary);
+  font-weight: var(--font-weight-semibold);
+}
+#content :is(.portfolio-dropdown-option, .sector-option, .holdings-option):focus-visible,
+#content #earnings-watchlist .ew-option:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
+  background: var(--color-primary-subtle);
+}
+.nav-icon-btn[aria-current="page"] {
+  background: var(--color-primary-subtle);
+  color: var(--color-primary);
+}
+
+/* Forms: consistent field edges and explicit keyboard focus. Native search
+   inputs retain their built-in clear affordance and search keyboard on iOS. */
+#content :is(.settings-input, .settings-select, .settings-textarea,
+             .form-input, .form-select, .universe-search-input, .news-search,
+             .watchlist-select, .watchlist-search-input),
+#content #earnings-watchlist :is(.ew-input-row input, .ew-dropdown) {
+  transition: border-color var(--duration-fast) var(--ease-out),
+              box-shadow var(--duration-fast) var(--ease-out);
+}
+#content :is(input, select, textarea):focus-visible {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-subtle);
+}
+#content :is(button, [role="button"], summary):focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+#content :is(button, select, input, textarea):disabled { cursor: not-allowed; }
+
+/* Toggle rows keep the 44px touch area while retaining a compact switch. */
+#content #settings-screen .settings-toggle { width: 44px; height: 44px; }
+#content #settings-screen .settings-toggle-slider { inset: 10px 0; }
+
+/* Search and add controls sit next to their own content, not in a global bar. */
+#content #alerts-screen .watchlist-select { min-width: 0; min-height: 36px; }
+#content #alerts-screen #newWLBtn { padding-inline: var(--space-3); white-space: nowrap; }
+#content #alerts-screen :is(.watchlist-search-input, .btn-add-ticker) { min-height: 36px; }
+
+/* A dialog stays visually separate from its parent; keep the close control
+   visible when a longer form scrolls. Shared expanded charts live elsewhere. */
+#content .modal-backdrop {
+  padding: var(--space-4);
+  z-index: 1500;
+  background: rgba(8, 18, 36, 0.52);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+#content .modal-backdrop .modal-card {
+  max-height: min(90vh, calc(100dvh - 32px));
+  border: 1px solid var(--color-border);
+  border-radius: 18px;
+}
+#content .modal-backdrop .modal-header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--color-bg-elevated);
+}
+#content .modal-backdrop .modal-close {
+  width: 40px;
+  height: 40px;
+  flex: none;
+  border-radius: var(--radius-md);
+  background: var(--color-bg-subtle);
+  color: var(--color-text-primary);
+}
+#content .modal-backdrop .modal-close:hover { background: var(--color-primary-subtle); color: var(--color-primary); }
+#content #alerts-screen :is(.confirm-overlay, .wl-modal-overlay) {
+  z-index: 1500;
+  background: rgba(8, 18, 36, 0.52);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+#content #alerts-screen .confirm-dialog {
+  width: min(400px, calc(100% - 32px));
+  border: 1px solid var(--color-border);
+  border-radius: 18px;
+}
+#content #alerts-screen .wl-modal {
+  width: min(560px, calc(100% - 32px));
+  border: 1px solid var(--color-border);
+  border-radius: 18px;
+}
+#content #alerts-screen .wl-modal-close {
+  width: 40px;
+  height: 40px;
+  background: var(--color-bg-subtle);
+}
+#content #alerts-screen .toast { max-width: calc(100vw - 32px); white-space: normal; text-align: center; }
+#content #earnings-watchlist dialog { border-color: var(--color-border); border-radius: 18px; }
+#content #earnings-watchlist .ew-dialog-header button { width: 40px; height: 40px; }
+
+/* Portfolio pickers share the same field/menu treatment across screens.
+   Keep display, positioning and disclosure rules in their screen templates. */
+#content :is(.portfolio-tabs-dropdown, .holdings-dropdown) {
+  min-width: 0;
+  min-height: 40px;
+  padding-inline: var(--space-3);
+  gap: var(--space-2);
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text-primary);
+  font: var(--font-weight-medium) 14px var(--font-family);
+  box-shadow: var(--shadow-sm);
+}
+#content :is(.portfolio-tabs-dropdown, .holdings-dropdown):focus {
+  outline: none;
+  border-color: var(--color-border);
+  box-shadow: var(--shadow-sm);
+}
+#content :is(.portfolio-tabs-dropdown, .holdings-dropdown):focus-visible {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-subtle);
+}
+#content :is(.portfolio-tabs-dropdown, .holdings-dropdown) .chevron { width: 16px; height: 16px; }
+#content :is(.portfolio-dropdown-menu, .holdings-menu) {
+  padding: var(--space-2);
+  border-radius: var(--radius-lg);
+  border-color: var(--color-border);
+  box-shadow: var(--shadow-lg);
+}
+#content :is(.portfolio-dropdown-option, .portfolio-dropdown-action, .holdings-option) {
+  min-height: 40px;
+  padding: var(--space-2) var(--space-3);
+  gap: var(--space-2);
+  border-radius: var(--radius-sm);
+  font: var(--font-weight-medium) 14px/1.4 var(--font-family);
+}
+#content :is(.portfolio-dropdown-option[role="option"], .holdings-option)::after {
+  content: "";
+  flex: none;
+  width: 6px;
+  height: 10px;
+  margin-inline: 4px;
+  border: solid currentColor;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+  opacity: 0;
+}
+#content :is(.portfolio-dropdown-option[aria-selected="true"], .holdings-option[aria-selected="true"])::after { opacity: 1; }
+#content :is(.option-currency, .holdings-currency, .portfolio-tabs .tab-currency) {
+  flex: none;
+  padding: 2px 6px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-bg-inset);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  letter-spacing: 0.02em;
+  line-height: 1.3;
+}
+#content :is(.portfolio-tab-group, .holdings-portfolio-tab) {
+  min-height: 36px;
+  padding: var(--space-2) var(--space-3);
+  gap: var(--space-2);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  font: var(--font-weight-medium) var(--font-size-sm)/1.3 var(--font-family);
+}
+#content :is(.portfolio-tab-group, .holdings-portfolio-tab)[aria-selected="true"] {
+  background: var(--color-primary-subtle);
+  border-color: var(--color-primary-muted);
+  color: var(--color-primary);
+  font-weight: var(--font-weight-semibold);
+}
+#content :is(.portfolio-tab-group[aria-selected="true"] .tab-currency,
+             .holdings-portfolio-tab[aria-selected="true"] .holdings-currency) {
+  background: var(--color-primary-subtle);
+  border-color: var(--color-primary-muted);
+  color: inherit;
+}
+#content :is(.portfolio-tabs, .holdings-selector) { gap: var(--space-3); }
+/* Desktop sticky tab strips use the same rounded, opaque surface as cards.
+   Portfolio popovers keep their existing overflow and positioning context. */
+@media (min-width: 768px) {
+  #content :is(.portfolio-tabs, .chart-tabs) {
+    min-width: 0;
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    background: var(--color-bg-elevated);
+    box-shadow: var(--shadow-sm);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+  #content .chart-tabs {
+    height: auto;
+    min-height: 54px;
+    margin-inline: var(--space-4);
+  }
+}
+#content .holdings-selector { padding-bottom: var(--space-3); }
+#content .holdings-selector-label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--color-text-secondary);
+}
+
+/* Scanner disclosure, chips and ETF selection use the same control scale. */
+#content .scanner-screen :is(.qs-filters, .etf-filter) {
+  padding: var(--space-3) var(--space-4);
+  gap: var(--space-2);
+}
+#content .scanner-screen :is(.qs-chip, .etf-pill) {
+  min-height: 32px;
+  padding: 6px var(--space-3);
+  gap: 6px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: var(--color-bg-elevated);
+  color: var(--color-text-secondary);
+  font: var(--font-weight-medium) var(--font-size-sm)/1.3 var(--font-family);
+}
+#content .scanner-screen :is(.qs-chip, .etf-pill)[aria-pressed="true"] {
+  background: var(--color-primary-subtle);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  font-weight: var(--font-weight-semibold);
+}
+#content .scanner-screen .qs-chip-reset { border-style: dashed; }
+#content .scanner-screen .qs-filter-toggle {
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font: var(--font-weight-medium) var(--font-size-base)/1.4 var(--font-family);
+}
+#content .scanner-screen .qs-filter-toggle[aria-expanded="true"] { border-color: var(--color-border-strong); }
+#content .scanner-screen :is(.qs-filter-label, .qs-showing, .etf-filter) {
+  font-family: var(--font-family);
+  font-size: var(--font-size-sm);
+  line-height: 1.4;
+}
+#content .scanner-screen .qs-filter-count { margin-left: var(--space-2); font-size: var(--font-size-xs); }
+#content .scanner-screen .etf-filter select {
+  min-height: 36px;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  font-family: var(--font-family);
+  font-size: 14px;
+}
+#content .scanner-screen .etf-select-wrap { min-width: 0; gap: var(--space-3); }
+@media (hover: hover) and (pointer: fine) {
+  #content :is(.portfolio-tab-group, .holdings-portfolio-tab):hover:not([aria-selected="true"]),
+  #content .scanner-screen :is(.qs-chip, .etf-pill):hover:not([aria-pressed="true"]) {
+    background: var(--color-bg-subtle);
+    border-color: var(--color-border-strong);
+    color: var(--color-text-primary);
+  }
+}
+@media (max-width: 767px), (pointer: coarse) {
+  #content :is(.portfolio-tabs-dropdown, .holdings-dropdown,
+               .portfolio-dropdown-option, .portfolio-dropdown-action, .holdings-option),
+  #content .scanner-screen :is(.qs-filter-toggle, .qs-chip, .etf-pill, .etf-filter select) { min-height: 44px; }
+  #content :is(.portfolio-tabs-dropdown, .holdings-dropdown,
+               .portfolio-dropdown-option, .portfolio-dropdown-action, .holdings-option) { font-size: var(--font-size-base); }
+}
+@media (max-width: 767px) {
+  #content :is(.portfolio-tabs-dropdown, .holdings-dropdown) { height: auto; padding-block: var(--space-2); }
+  #content .scanner-screen :is(.qs-filters, .etf-filter) { padding: var(--space-3); }
+  #content .scanner-screen .qs-filter-options { gap: var(--space-2); padding-top: var(--space-2); }
+  #content .scanner-screen .qs-filter-label { flex-basis: 100%; }
+  #content .scanner-screen .qs-chip { font-size: 14px; max-width: 100%; white-space: normal; text-align: left; }
+  #content .scanner-screen .etf-filter select { min-width: 0; font-size: 16px; }
+}
+
+/* Loading and status communicate progress without competing with the content. */
+#content .loading-state { color: var(--color-text-secondary); }
+#content .loading-state .spinner { border-top-color: var(--color-primary); }
+#content .error-state :is(button, .retry-btn) { border-radius: var(--radius-md); }
+
+@media (max-width: 767px) {
+  #content :is(.btn, .btn-primary, .btn-ghost, .settings-save-webhook-btn,
+               .add-chart-btn, .ew-refresh, .wl-modal-btn) { min-height: 44px; }
+  #content :is(.action-btn, .watchlist-action-btn, .year-nav-btn,
+               .modal-close, .wl-modal-close) { min-width: 44px; min-height: 44px; }
+  #content #alerts-screen :is(.watchlist-select, .watchlist-search-input,
+                               .btn-add-ticker) { min-height: 44px; }
+  #content #reorder-modal { padding: 0; }
+  #content #reorder-modal .modal-card {
+    max-height: 88dvh;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  }
+  #content #earnings-watchlist .ew-dialog-header button { width: 44px; height: 44px; }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  #content .modal-backdrop,
+  #content #alerts-screen :is(.confirm-overlay, .wl-modal-overlay) {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}

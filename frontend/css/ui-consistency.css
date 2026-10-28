@@ -1,0 +1,135 @@
+/* Shared review-layer typography and controls. Screen templates load their own
+   styles later, so these rules are scoped to #content instead of changing
+   chart rendering, financial figures, or screen-specific layouts. */
+#content :is(.page-title, .screen-title, .page-header-text h1),
+#content #earnings-watchlist h1 {
+  font-family: var(--font-family);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+  letter-spacing: -0.02em;
+  color: var(--color-text-primary);
+}
+
+#content :is(.page-subtitle, .page-header-text p, .settings-section-description),
+#content #earnings-watchlist .ew-subtitle {
+  font-family: var(--font-family);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-normal);
+  color: var(--color-text-secondary);
+}
+
+#content :is(.card-header h2, .settings-section-title, .panel-title, .positions-title,
+             .donut-panel-title, .sector-panel-title, .pnl-panel-title) {
+  font-family: var(--font-family);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  text-transform: none;
+  color: var(--color-text-primary);
+}
+
+#content :is(.settings-label, .form-label, .stats-bar-label, .stock-stat-label,
+             .trade-form-label, .stat-label, .stat-content p) {
+  font-family: var(--font-family);
+  font-size: 12px;
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.4;
+  letter-spacing: 0.03em;
+  color: var(--color-text-secondary);
+}
+
+#content #earnings-watchlist :is(.ew-eyebrow, .ew-stat-label, .ew-control-label,
+                                  .ew-field-label, .ew-input-row label) {
+  font-family: var(--font-family);
+  font-size: 12px;
+  letter-spacing: 0.03em;
+  color: var(--color-text-secondary);
+}
+
+#content :is(.settings-help, .settings-toggle-description) {
+  font-family: var(--font-family);
+  font-size: 12px;
+  line-height: var(--line-height-normal);
+  color: var(--color-text-secondary);
+}
+
+/* Labels and actions share the system font; numeric data uses tabular figures. */
+#content :is(.btn, .btn-primary, .btn-ghost, .settings-save-webhook-btn,
+             .filter-chip, .scanner-tab, .news-chip, .news-tool-btn,
+             .news-date-pill, .sector-option),
+#content #earnings-watchlist :is(.ew-refresh, .ew-dropdown, .ew-option, [data-window]) {
+  font-family: var(--font-family);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0;
+}
+
+#content :is(.settings-input, .settings-select, .settings-textarea,
+             .form-input, .form-select, .universe-search-input, .news-search),
+#content #earnings-watchlist :is(.ew-input-row input, .ew-dropdown) {
+  font-family: var(--font-family);
+  font-size: 14px;
+  min-height: 40px;
+  background-color: var(--color-bg-elevated);
+  border-color: var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+#content :is(.settings-input, .settings-select, .settings-textarea,
+             .form-input, .form-select, .universe-search-input, .news-search):focus,
+#content #earnings-watchlist :is(.ew-input-row input, .ew-dropdown):focus {
+  border-color: var(--color-text-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-subtle);
+}
+
+#content :is(.settings-section, .stock-card, .ranking-panel),
+#content .stats-bar,
+#content #alerts-screen .card,
+#content #alerts-screen .stats-row,
+#content #earnings-watchlist :is(.ew-board, .ew-stats) {
+  border-color: var(--color-border);
+  border-radius: var(--radius-lg);
+}
+
+#content #alerts-screen .page-header { padding: 0; margin-bottom: var(--space-6); }
+#content #alerts-screen .card-header { padding: var(--space-4) var(--space-5); }
+#content #alerts-screen .stat-content p { text-transform: none; }
+#content #settings-screen .settings-section-body { padding: var(--space-5); }
+#content .news-mover summary { padding: var(--space-3) var(--space-4); }
+#content #earnings-watchlist .ew-option { min-height: 40px; }
+
+@media (max-width: 767px) {
+  #content :is(.page-title, .screen-title, .page-header-text h1),
+  #content #earnings-watchlist h1 { font-size: clamp(22px, 6vw, 24px); }
+
+  #content :is(.settings-input, .settings-select, .settings-textarea,
+               .form-input, .form-select, .universe-search-input, .news-search),
+  #content #earnings-watchlist :is(.ew-input-row input, .ew-dropdown) { min-height: 44px; }
+
+  #content :is(.btn, .settings-save-webhook-btn, .filter-chip, .scanner-tab,
+               .news-chip, .news-tool-btn, .news-date-pill),
+  #content #earnings-watchlist :is(.ew-refresh, .ew-option, [data-window]) { min-height: 44px; }
+
+  #content #universe-screen .screen-header,
+  #content #settings-screen .screen-header { align-items: stretch; }
+
+  /* Five digest totals stay readable without clipping a horizontal scrollbar. */
+  #content #news-stats {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 0;
+    overflow: hidden;
+    padding: var(--space-3) var(--space-2);
+  }
+  #content #news-stats .stats-bar-divider { display: none; }
+  #content #news-stats .stats-bar-item {
+    min-width: 0;
+    padding-inline: var(--space-1);
+    border-right: 1px solid var(--color-divider);
+  }
+  #content #news-stats .stats-bar-item:last-child { border-right: 0; }
+  #content #news-stats .stats-bar-label { font-size: 11px; letter-spacing: 0; }
+}
